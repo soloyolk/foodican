@@ -1,0 +1,15 @@
+{
+  "generatedAt": null,
+  "items": [
+    {
+      "id": "welcome",
+      "title": "Welcome to Foodican",
+      "description": "Good eats, cool tech, and little life upgrades — all in one place.",
+      "category": "life",
+      "publishedAt": "2026-10-01T00:00:00Z",
+      "url": "https://www.youtube.com/@thefoodican",
+      "thumbnail": "",
+      "location": ""
+    }
+  ]
+}

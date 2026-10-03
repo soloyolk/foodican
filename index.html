@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Foodican — eating my way around the world, one byte at a time. Food, tech, life, and cool finds." />
+  <meta name="theme-color" content="#102a43" />
+  <title>Foodican — Food · Tech · Life</title>
+  <link rel="icon" href="assets/Foodican_Logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a class="brand" href="#top" aria-label="Foodican home">
+        <img src="assets/Foodican_Logo.png" alt="Foodican" />
+      </a>
+      <nav class="nav" aria-label="Primary navigation">
+        <a href="#food">Food</a>
+        <a href="#tech">Tech</a>
+        <a href="#life">Life</a>
+        <a href="#finds">Finds</a>
+        <a href="#map">Map</a>
+        <a href="#about">About</a>
+      </nav>
+      <button class="menu-btn" aria-label="Open menu" aria-expanded="false">☰</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero container">
+      <div class="hero-copy">
+        <div class="eyebrow">FOOD · TECH · LIFE</div>
+        <h1>Good eats.<br /><span>Cool tech.</span><br />Better life.</h1>
+        <p class="hero-tagline">🍜 Eating my way around the world, one <strong>bite</strong> at a time.<br />📱 Always on the lookout for good eats, cool tech, and life hacks!</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#latest">See what I’m eating</a>
+          <a class="btn btn-ghost" href="https://www.youtube.com/@thefoodican" target="_blank" rel="noreferrer">Watch on YouTube ↗</a>
+        </div>
+      </div>
+      <div class="hero-art">
+        <div class="hero-orbit orbit-one"></div>
+        <div class="hero-orbit orbit-two"></div>
+        <img src="assets/Foodican_Logo.png" alt="Foodican mascot" class="hero-logo" />
+        <div class="float-card card-bite">BITE<br /><small>🍜</small></div>
+        <div class="float-card card-byte">BYTE<br /><small>⌁</small></div>
+      </div>
+    </section>
+
+    <section class="ticker" aria-label="Foodican categories">
+      <div class="ticker-track">
+        <span>🍜 FOOD</span><i>✦</i><span>📱 TECH</span><i>✦</i><span>✨ LIFE</span><i>✦</i><span>📍 FINDS</span><i>✦</i>
+        <span>🍜 FOOD</span><i>✦</i><span>📱 TECH</span><i>✦</i><span>✨ LIFE</span><i>✦</i><span>📍 FINDS</span><i>✦</i>
+      </div>
+    </section>
+
+    <section id="latest" class="section container">
+      <div class="section-heading">
+        <div><div class="eyebrow">FRESH FROM THE FEED</div><h2>Latest bites & bytes</h2></div>
+        <a href="https://www.youtube.com/@thefoodican" target="_blank" rel="noreferrer" class="text-link">All videos ↗</a>
+      </div>
+      <div id="latest-grid" class="content-grid"></div>
+    </section>
+
+    <section id="food" class="section section-soft">
+      <div class="container">
+        <div class="section-heading"><div><div class="eyebrow">🍜 FOOD</div><h2>Worth the calories.</h2></div><a href="#latest" class="text-link">Explore food ↓</a></div>
+        <div id="food-grid" class="content-grid"></div>
+      </div>
+    </section>
+
+    <section id="tech" class="section container">
+      <div class="section-heading"><div><div class="eyebrow">📱 TECH</div><h2>Stuff that makes life smarter.</h2></div><a href="#latest" class="text-link">Explore tech ↓</a></div>
+      <div id="tech-grid" class="content-grid"></div>
+    </section>
+
+    <section id="life" class="section section-soft">
+      <div class="container">
+        <div class="section-heading"><div><div class="eyebrow">✨ LIFE</div><h2>Little upgrades, big difference.</h2></div><a href="#latest" class="text-link">Explore life ↓</a></div>
+        <div id="life-grid" class="content-grid"></div>
+      </div>
+    </section>
+
+    <section id="finds" class="section container">
+      <div class="finds-card">
+        <div class="finds-mascot"><img src="assets/Foodican_Logo.png" alt="Foodican mascot" /></div>
+        <div>
+          <div class="eyebrow">FOODICAN FINDS</div>
+          <h2>The stuff I’d tell a friend about.</h2>
+          <p>A growing collection of restaurants, gadgets, travel spots, apps, and life hacks that made the cut.</p>
+          <div class="pill-row"><span>🍜 Restaurants</span><span>📱 Gadgets</span><span>✈️ Travel</span><span>🤖 AI</span><span>✨ Life hacks</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="map" class="section map-section">
+      <div class="container">
+        <div class="map-panel">
+          <div class="eyebrow">📍 FOODICAN MAP</div>
+          <h2>Every bite leaves a pin.</h2>
+          <p>As new videos are published, locations can become part of a searchable Foodican map.</p>
+          <div class="map-placeholder"><span>🗺️</span><div><strong>Map coming next</strong><small>Automated location extraction is ready to plug in.</small></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="about" class="section container about">
+      <div class="about-logo"><img src="assets/Foodican_Logo.png" alt="Foodican logo" /></div>
+      <div>
+        <div class="eyebrow">ABOUT FOODICAN</div>
+        <h2>One curious human. A lot of things worth trying.</h2>
+        <p>Foodican is a personal discovery brand covering food, technology, travel, and the little life upgrades that make everyday life more fun.</p>
+        <div class="social-row">
+          <a href="https://www.youtube.com/@thefoodican" target="_blank" rel="noreferrer">YouTube</a>
+          <a href="https://www.instagram.com/thefoodican/" target="_blank" rel="noreferrer">Instagram</a>
+          <a href="https://www.tiktok.com/@thefoodican" target="_blank" rel="noreferrer">TikTok</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div>© <span id="year"></span> Foodican</div>
+      <div>Eat. Explore. Repeat. <span class="footer-dot">●</span> <a href="#top">Back to top ↑</a></div>
+    </div>
+  </footer>
+  <script src="script.js" defer></script>
+</body>
+</html>
