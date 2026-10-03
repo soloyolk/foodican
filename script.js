@@ -137,117 +137,111 @@
         .join('');
   }
 
-  function card(item) {
-    const date =
-      item.publishedAt
-        ? new Date(
-            item.publishedAt
-          ).toLocaleDateString(
-            undefined,
-            {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric'
-            }
-          )
-        : '';
+function card(item) {
+  const date =
+    item.publishedAt
+      ? new Date(item.publishedAt).toLocaleDateString(
+          undefined,
+          {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          }
+        )
+      : '';
 
-    const emoji = {
-      food: '🍜',
-      tech: '📱',
-      life: '✨'
-    }[
-      item.category
-    ] || '✦';
+  const emoji = {
+    food: '🍜',
+    tech: '📱',
+    life: '✨'
+  }[item.category] || '✦';
 
-    const type =
-      item.isShort
-        ? 'Short'
-        : 'Video';
+  const type =
+    item.isShort ? 'Short' : 'Video';
 
-    const location =
-      item.location
-        ? ` · ${item.location}`
-        : '';
+  const watchUrl =
+    item.isShort
+      ? `https://www.youtube.com/shorts/${item.id}`
+      : item.url;
 
-    return `
-      <article class="content-card">
+  return `
+    <article class="content-card">
+
+      <a
+        class="thumb"
+        href="${esc(watchUrl)}"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        ${
+          item.thumbnail
+            ? `
+              <img
+                src="${esc(item.thumbnail)}"
+                alt=""
+                loading="lazy"
+              >
+            `
+            : `
+              <span class="placeholder">
+                ${emoji}
+              </span>
+            `
+        }
+
+        ${
+          item.isShort
+            ? `
+              <span class="short-badge">
+                SHORT
+              </span>
+            `
+            : ''
+        }
+      </a>
+
+      <div class="card-body">
+
+        <div class="card-meta">
+          ${emoji}
+          ${esc(
+            cap(item.category || 'life')
+          )}
+          · ${type}
+          ${date ? ` · ${esc(date)}` : ''}
+        </div>
+
+        <h3>
+          ${esc(item.title)}
+        </h3>
+
+        <p>
+          ${esc(
+            shorten(
+              item.description || '',
+              140
+            )
+          )}
+        </p>
 
         <a
-          class="thumb"
-          href="${esc(item.url)}"
+          class="card-link"
+          href="${esc(watchUrl)}"
           target="_blank"
           rel="noopener noreferrer"
         >
           ${
-            item.thumbnail
-              ? `
-                <img
-                  src="${esc(item.thumbnail)}"
-                  alt=""
-                  loading="lazy"
-                >
-              `
-              : `
-                <span class="placeholder">
-                  ${emoji}
-                </span>
-              `
-          }
-
-          ${
             item.isShort
-              ? `
-                <span class="short-badge">
-                  SHORT
-                </span>
-              `
-              : ''
+              ? 'Watch Short ↗'
+              : 'Watch / explore ↗'
           }
         </a>
 
-        <div class="card-body">
+      </div>
 
-          <div class="card-meta">
-            ${emoji}
-            ${esc(
-              cap(
-                item.category || 'life'
-              )
-            )}
-            ·
-            ${type}
-            ${date ? ` · ${esc(date)}` : ''}
-            ${esc(location)}
-          </div>
-
-          <h3>
-            ${esc(item.title)}
-          </h3>
-
-          <p>
-            ${esc(
-              shorten(
-                item.description || '',
-                140
-              )
-            )}
-          </p>
-
-          <a
-            class="card-link"
-            href="${esc(item.url)}"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Watch / explore ↗
-          </a>
-
-        </div>
-
-      </article>
-    `;
-  }
+    </article>
+  `;
+}
 
   function emptyState(type) {
     const messages = {
