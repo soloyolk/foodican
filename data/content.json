@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T08:23:03.127Z",
+  "generatedAt": "2026-10-03T08:29:09.901Z",
   "channel": "@thefoodican",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "itemCount": 4,
@@ -12,7 +12,7 @@
       "url": "https://www.youtube.com/shorts/OdDExIJUxLM",
       "thumbnail": "https://i.ytimg.com/vi/OdDExIJUxLM/hqdefault.jpg",
       "category": "food",
-      "location": "mckinney, TX",
+      "location": "YOHE SUSHI & SEAFOOD",
       "isShort": true,
       "type": "short",
       "channel": "Foodican",
@@ -21,10 +21,10 @@
       "viewCount": 0,
       "likeCount": 0,
       "tags": [],
-      "latitude": 33.1976496,
-      "longitude": -96.6154471,
-      "locationPrecision": "city",
-      "locationSource": "location",
+      "latitude": 33.2212543,
+      "longitude": -96.6360524,
+      "locationPrecision": "exact",
+      "locationSource": "youtube",
       "published": "2026-09-30T02:20:49+00:00"
     },
     {
