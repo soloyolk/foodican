@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T07:17:55.018Z",
+  "generatedAt": "2026-10-03T07:45:41.661Z",
   "source": {
     "platform": "youtube",
     "handle": "@thefoodican",
@@ -12,12 +12,12 @@
     {
       "id": "OdDExIJUxLM",
       "title": "Yohe Sushi & Seafood AYCE",
-      "description": "Craved some AYCE seafood so checked out Yohe Sushi & Seafood! #ayce #sushi #seafood #boils #allthenoms #mckinneytx",
+      "description": "Craved some AYCE seafood so checked out Yohe Sushi & Seafood!\n#ayce #sushi #seafood #boils #allthenoms #mckinneytx",
       "publishedAt": "2026-09-30T02:20:49+00:00",
       "url": "https://www.youtube.com/shorts/OdDExIJUxLM",
-      "thumbnail": "https://i4.ytimg.com/vi/OdDExIJUxLM/hqdefault.jpg",
+      "thumbnail": "https://i.ytimg.com/vi/OdDExIJUxLM/hqdefault.jpg",
       "category": "food",
-      "location": "McKinney",
+      "location": "McKinney, TX",
       "isShort": true,
       "type": "short",
       "channel": "Foodican",
@@ -25,16 +25,20 @@
       "duration": 0,
       "viewCount": 0,
       "likeCount": 0,
-      "tags": []
+      "tags": [],
+      "latitude": 33.1976496,
+      "longitude": -96.6154471,
+      "locationPrecision": "city",
+      "locationSource": "location"
     },
     {
       "id": "IS3TpEqQ4Vw",
       "title": "Kim Sơn Vietnamese Buffet (Houston, TX)",
-      "description": "Taking my Foodican adventures over to Houston's Kim Sơn Vietnamese buffet! 🦐 #kimsơn #vietnamese #foodicanadventures",
+      "description": "Taking my Foodican adventures over to Houston's Kim Sơn Vietnamese buffet! 🦐\n\n#kimsơn #vietnamese #foodicanadventures",
       "publishedAt": "2026-09-22T02:20:38+00:00",
       "url": "https://www.youtube.com/shorts/IS3TpEqQ4Vw",
-      "thumbnail": "https://i2.ytimg.com/vi/IS3TpEqQ4Vw/hqdefault.jpg",
-      "category": "food",
+      "thumbnail": "https://i.ytimg.com/vi/IS3TpEqQ4Vw/hqdefault.jpg",
+      "category": "life",
       "location": "Houston, TX",
       "isShort": true,
       "type": "short",
@@ -43,17 +47,21 @@
       "duration": 0,
       "viewCount": 0,
       "likeCount": 0,
-      "tags": []
+      "tags": [],
+      "latitude": 29.7589382,
+      "longitude": -95.3676974,
+      "locationPrecision": "city",
+      "locationSource": "location"
     },
     {
       "id": "y-YbxBRmhS4",
       "title": "New Fish City Grill September menu addition!",
-      "description": "Craving some seafood in September? Fish City Grill has some new goodies on the menu! #fishcitygrill #september #foodiefun",
+      "description": "Craving some seafood in September? Fish City Grill has some new goodies on the menu! \n#fishcitygrill #september #foodiefun",
       "publishedAt": "2026-09-05T13:06:57+00:00",
       "url": "https://www.youtube.com/shorts/y-YbxBRmhS4",
-      "thumbnail": "https://i2.ytimg.com/vi/y-YbxBRmhS4/hqdefault.jpg",
+      "thumbnail": "https://i.ytimg.com/vi/y-YbxBRmhS4/hqdefault.jpg",
       "category": "food",
-      "location": "",
+      "location": "Craving some seafood, IN",
       "isShort": true,
       "type": "short",
       "channel": "Foodican",
@@ -61,15 +69,19 @@
       "duration": 0,
       "viewCount": 0,
       "likeCount": 0,
-      "tags": []
+      "tags": [],
+      "latitude": null,
+      "longitude": null,
+      "locationPrecision": "",
+      "locationSource": ""
     },
     {
       "id": "4e_XsPb_csw",
       "title": "Olive Garden's Never Ending Pasta Bowls are back with a kick!",
-      "description": "Olive Garden's Never Ending Pasta Bowls are back... And they have some new updates!! Here's my first foodie content ... hope you like it! #olivegarden #neverendingpastabowl #foodcoma",
+      "description": "Olive Garden's Never Ending Pasta Bowls are back... And they have some new updates!!\n\nHere's my first foodie content ... hope you like it!\n\n#olivegarden #neverendingpastabowl #foodcoma",
       "publishedAt": "2026-09-04T02:58:45+00:00",
       "url": "https://www.youtube.com/shorts/4e_XsPb_csw",
-      "thumbnail": "https://i1.ytimg.com/vi/4e_XsPb_csw/hqdefault.jpg",
+      "thumbnail": "https://i.ytimg.com/vi/4e_XsPb_csw/hqdefault.jpg",
       "category": "food",
       "location": "",
       "isShort": true,
@@ -79,7 +91,11 @@
       "duration": 0,
       "viewCount": 0,
       "likeCount": 0,
-      "tags": []
+      "tags": [],
+      "latitude": null,
+      "longitude": null,
+      "locationPrecision": "",
+      "locationSource": ""
     }
   ]
 }
