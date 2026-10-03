@@ -2,9 +2,10 @@ name: Update Foodican Content
 
 on:
   schedule:
-    # Every 6 hours
+    # Run every 6 hours
     - cron: '17 */6 * * *'
 
+  # Allow you to manually run it from GitHub
   workflow_dispatch:
 
 permissions:
@@ -18,76 +19,155 @@ jobs:
   update:
     runs-on: ubuntu-latest
 
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install yt-dlp
-        run: |
-          python -m pip install \
-            --upgrade \
-            --disable-pip-version-check \
-            yt-dlp
-
-      - name: Verify yt-dlp
-        run: |
-          yt-dlp --version
-
-      - name: Test YouTube discovery
+      - name: Verify YouTube feed
         env:
           YOUTUBE_CHANNEL_ID: 'UCE6VXOmQeNKBqVspyX5qoWA'
         run: |
-          yt-dlp \
-            --flat-playlist \
-            --playlist-end 5 \
-            --print "%(id)s | %(title)s | %(url)s" \
-            "https://www.youtube.com/playlist?list=UUE6VXOmQeNKBqVspyX5qoWA"
+          node - <<'NODE'
+          const https = require('https');
+
+          const channelId =
+            process.env.YOUTUBE_CHANNEL_ID;
+
+          const url =
+            `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
+
+          console.log(`Testing: ${url}`);
+
+          https.get(
+            url,
+            {
+              headers: {
+                'User-Agent': 'Foodican GitHub Action/1.0'
+              }
+            },
+            response => {
+              let body = '';
+
+              response.on(
+                'data',
+                chunk => {
+                  body += chunk;
+                }
+              );
+
+              response.on(
+                'end',
+                () => {
+                  console.log(
+                    `HTTP status: ${response.statusCode}`
+                  );
+
+                  console.log(
+                    `Response length: ${body.length}`
+                  );
+
+                  if (
+                    response.statusCode !== 200
+                  ) {
+                    process.exit(1);
+                  }
+
+                  if (
+                    !body.includes('<entry>')
+                  ) {
+                    console.error(
+                      'YouTube feed did not contain any entries.'
+                    );
+
+                    process.exit(1);
+                  }
+
+                  const matches =
+                    body.match(
+                      /<yt:videoId>/g
+                    ) || [];
+
+                  console.log(
+                    `Videos detected: ${matches.length}`
+                  );
+                }
+              );
+            }
+          ).on(
+            'error',
+            error => {
+              console.error(
+                error.message
+              );
+
+              process.exit(1);
+            }
+          );
+          NODE
 
       - name: Update Foodican content
         env:
           YOUTUBE_CHANNEL_ID: 'UCE6VXOmQeNKBqVspyX5qoWA'
           YOUTUBE_HANDLE: '@thefoodican'
           MAX_ITEMS: '100'
-          MAX_NEW_ITEMS: '20'
         run: |
           node scripts/update-content.js
 
-      - name: Check generated content
+      - name: Validate generated content
         run: |
           node - <<'NODE'
           const fs = require('fs');
 
-          const file = 'data/content.json';
+          const file =
+            'data/content.json';
 
           if (!fs.existsSync(file)) {
-            throw new Error('content.json was not generated');
+            throw new Error(
+              'data/content.json was not generated.'
+            );
           }
 
           const data =
-            JSON.parse(fs.readFileSync(file, 'utf8'));
+            JSON.parse(
+              fs.readFileSync(
+                file,
+                'utf8'
+              )
+            );
 
-          if (!Array.isArray(data.items)) {
-            throw new Error('content.json items is not an array');
+          if (
+            !Array.isArray(data.items)
+          ) {
+            throw new Error(
+              'content.json items is not an array.'
+            );
           }
 
-          for (const item of data.items) {
-            if (!item.id || !item.title || !item.url) {
+          if (
+            data.items.length === 0
+          ) {
+            throw new Error(
+              'content.json contains zero items.'
+            );
+          }
+
+          for (
+            const item of data.items
+          ) {
+            if (
+              !item.id ||
+              !item.title ||
+              !item.url
+            ) {
               throw new Error(
-                `Invalid content item: ${JSON.stringify(item)}`
+                `Invalid item: ${JSON.stringify(item)}`
               );
             }
           }
@@ -95,6 +175,44 @@ jobs:
           console.log(
             `Validated ${data.items.length} content items.`
           );
+          NODE
+
+      - name: Show content summary
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+
+          const data =
+            JSON.parse(
+              fs.readFileSync(
+                'data/content.json',
+                'utf8'
+              )
+            );
+
+          console.log('');
+          console.log('Foodican content:');
+          console.log('');
+
+          data.items
+            .slice(0, 15)
+            .forEach(
+              (item, index) => {
+                console.log(
+                  `${index + 1}. ${item.title}`
+                );
+
+                console.log(
+                  `   ${item.isShort ? 'SHORT' : 'VIDEO'}`
+                );
+
+                console.log(
+                  `   ${item.url}`
+                );
+
+                console.log('');
+              }
+            );
           NODE
 
       - name: Commit changes only when needed
