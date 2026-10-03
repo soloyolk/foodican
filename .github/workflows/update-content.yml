@@ -2,31 +2,41 @@ name: Update Foodican Content
 
 on:
   schedule:
-    # Run every 6 hours
+    # Every 6 hours
     - cron: '17 */6 * * *'
 
-  # Allow manual updates from GitHub Actions
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: foodican-content-update
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
 
+    timeout-minutes: 10
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install latest yt-dlp
+      - name: Install yt-dlp
         run: |
-          python -m pip install --upgrade --disable-pip-version-check yt-dlp
+          python -m pip install \
+            --upgrade \
+            --disable-pip-version-check \
+            yt-dlp
 
       - name: Verify yt-dlp
         run: |
@@ -34,19 +44,57 @@ jobs:
 
       - name: Update Foodican content
         env:
+          YOUTUBE_CHANNEL_ID: 'UCE6VXOmQeNKBqVspyX5qoWA'
           YOUTUBE_HANDLE: '@thefoodican'
           MAX_ITEMS: '100'
+          MAX_NEW_ITEMS: '20'
         run: |
           node scripts/update-content.js
 
-      - name: Commit changes
+      - name: Check generated content
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+
+          const file = 'data/content.json';
+
+          if (!fs.existsSync(file)) {
+            throw new Error('content.json was not generated');
+          }
+
+          const data =
+            JSON.parse(fs.readFileSync(file, 'utf8'));
+
+          if (!Array.isArray(data.items)) {
+            throw new Error('content.json items is not an array');
+          }
+
+          for (const item of data.items) {
+            if (!item.id || !item.title || !item.url) {
+              throw new Error(
+                `Invalid content item: ${JSON.stringify(item)}`
+              );
+            }
+          }
+
+          console.log(
+            `Validated ${data.items.length} content items.`
+          );
+          NODE
+
+      - name: Commit changes only when needed
         run: |
           git config user.name 'Foodican Bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
           git add data/content.json
 
-          git diff --cached --quiet || git commit \
+          if git diff --cached --quiet; then
+            echo "No content changes detected."
+            exit 0
+          fi
+
+          git commit \
             -m "chore: update Foodican content"
 
           git push
