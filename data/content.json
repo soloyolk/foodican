@@ -1,13 +1,85 @@
 {
-  "generatedAt": "2026-10-03T06:58:19.333Z",
+  "generatedAt": "2026-10-03T07:17:55.018Z",
   "source": {
     "platform": "youtube",
     "handle": "@thefoodican",
     "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
     "channelUrl": "https://www.youtube.com/channel/UCE6VXOmQeNKBqVspyX5qoWA",
-    "uploadsPlaylistId": "UUE6VXOmQeNKBqVspyX5qoWA",
-    "uploadsUrl": "https://www.youtube.com/playlist?list=UUE6VXOmQeNKBqVspyX5qoWA"
+    "feedUrl": "https://www.youtube.com/feeds/videos.xml?channel_id=UCE6VXOmQeNKBqVspyX5qoWA"
   },
-  "itemCount": 0,
-  "items": []
+  "itemCount": 4,
+  "items": [
+    {
+      "id": "OdDExIJUxLM",
+      "title": "Yohe Sushi & Seafood AYCE",
+      "description": "Craved some AYCE seafood so checked out Yohe Sushi & Seafood! #ayce #sushi #seafood #boils #allthenoms #mckinneytx",
+      "publishedAt": "2026-09-30T02:20:49+00:00",
+      "url": "https://www.youtube.com/shorts/OdDExIJUxLM",
+      "thumbnail": "https://i4.ytimg.com/vi/OdDExIJUxLM/hqdefault.jpg",
+      "category": "food",
+      "location": "McKinney",
+      "isShort": true,
+      "type": "short",
+      "channel": "Foodican",
+      "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
+      "duration": 0,
+      "viewCount": 0,
+      "likeCount": 0,
+      "tags": []
+    },
+    {
+      "id": "IS3TpEqQ4Vw",
+      "title": "Kim Sơn Vietnamese Buffet (Houston, TX)",
+      "description": "Taking my Foodican adventures over to Houston's Kim Sơn Vietnamese buffet! 🦐 #kimsơn #vietnamese #foodicanadventures",
+      "publishedAt": "2026-09-22T02:20:38+00:00",
+      "url": "https://www.youtube.com/shorts/IS3TpEqQ4Vw",
+      "thumbnail": "https://i2.ytimg.com/vi/IS3TpEqQ4Vw/hqdefault.jpg",
+      "category": "food",
+      "location": "Houston, TX",
+      "isShort": true,
+      "type": "short",
+      "channel": "Foodican",
+      "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
+      "duration": 0,
+      "viewCount": 0,
+      "likeCount": 0,
+      "tags": []
+    },
+    {
+      "id": "y-YbxBRmhS4",
+      "title": "New Fish City Grill September menu addition!",
+      "description": "Craving some seafood in September? Fish City Grill has some new goodies on the menu! #fishcitygrill #september #foodiefun",
+      "publishedAt": "2026-09-05T13:06:57+00:00",
+      "url": "https://www.youtube.com/shorts/y-YbxBRmhS4",
+      "thumbnail": "https://i2.ytimg.com/vi/y-YbxBRmhS4/hqdefault.jpg",
+      "category": "food",
+      "location": "",
+      "isShort": true,
+      "type": "short",
+      "channel": "Foodican",
+      "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
+      "duration": 0,
+      "viewCount": 0,
+      "likeCount": 0,
+      "tags": []
+    },
+    {
+      "id": "4e_XsPb_csw",
+      "title": "Olive Garden's Never Ending Pasta Bowls are back with a kick!",
+      "description": "Olive Garden's Never Ending Pasta Bowls are back... And they have some new updates!! Here's my first foodie content ... hope you like it! #olivegarden #neverendingpastabowl #foodcoma",
+      "publishedAt": "2026-09-04T02:58:45+00:00",
+      "url": "https://www.youtube.com/shorts/4e_XsPb_csw",
+      "thumbnail": "https://i1.ytimg.com/vi/4e_XsPb_csw/hqdefault.jpg",
+      "category": "food",
+      "location": "",
+      "isShort": true,
+      "type": "short",
+      "channel": "Foodican",
+      "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
+      "duration": 0,
+      "viewCount": 0,
+      "likeCount": 0,
+      "tags": []
+    }
+  ]
 }
