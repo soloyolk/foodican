@@ -1589,21 +1589,35 @@ async function buildContent() {
     );
 
 
-  /*
-   * STEP 4:
-   * Start with existing content.
-   *
-   * This means videos outside the Atom feed are preserved.
-   */
-  const items =
-    existing.items.map(
-      item => ({
-        ...item
-      })
-    );
+/*
+ * STEP 4:
+ * Start with existing content.
+ *
+ * This means videos outside the Atom feed are preserved.
+ */
+const items =
+  existing.items.map(
+    item => ({
+      ...item
+    })
+  );
 
 
-  let geocodesUsed = 0;
+/*
+ * Re-run category detection for ALL existing videos.
+ *
+ * Category detection is local and does not use the YouTube API,
+ * so this is safe to do every run.
+ *
+ * This allows classification rules to be improved later without
+ * requiring videos to be newly published.
+ */
+for (const item of items) {
+  item.category = categorizeVideo(item);
+}
+
+
+let geocodesUsed = 0;
 
 
   /*
@@ -1643,11 +1657,8 @@ async function buildContent() {
           null
         ),
 
-      category:
-        detectCategory(
-          feedItem.title,
-          feedItem.description
-        ),
+category:
+  categorizeVideo(feedItem),
 
       location:
         '',
