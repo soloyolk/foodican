@@ -2,14 +2,16 @@ name: Update Foodican Content
 
 on:
   schedule:
-    # Run every 6 hours
+    # Run every 6 hours.
     - cron: '17 */6 * * *'
 
-  # Allow you to manually run it from GitHub
+  # Allow manual runs from GitHub Actions.
   workflow_dispatch:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: foodican-content-update
@@ -19,16 +21,37 @@ jobs:
   update:
     runs-on: ubuntu-latest
 
-    timeout-minutes: 5
+    timeout-minutes: 10
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+
+      # ============================================================
+      # CHECKOUT
+      # ============================================================
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+
+      # ============================================================
+      # NODE
+      # ============================================================
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+
+      # ============================================================
+      # VERIFY FREE YOUTUBE FEED
+      # ============================================================
 
       - name: Verify YouTube feed
         env:
@@ -43,13 +66,16 @@ jobs:
           const url =
             `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
 
-          console.log(`Testing: ${url}`);
+          console.log(
+            `Testing YouTube feed: ${url}`
+          );
 
           https.get(
             url,
             {
               headers: {
-                'User-Agent': 'Foodican GitHub Action/1.0'
+                'User-Agent':
+                  'Foodican GitHub Action/1.0'
               }
             },
             response => {
@@ -76,6 +102,10 @@ jobs:
                   if (
                     response.statusCode !== 200
                   ) {
+                    console.error(
+                      'YouTube feed request failed.'
+                    );
+
                     process.exit(1);
                   }
 
@@ -104,7 +134,7 @@ jobs:
             'error',
             error => {
               console.error(
-                error.message
+                `YouTube feed error: ${error.message}`
               );
 
               process.exit(1);
@@ -112,14 +142,27 @@ jobs:
           );
           NODE
 
+
+      # ============================================================
+      # UPDATE CONTENT
+      #
+      # The script itself determines whether the YouTube API
+      # is necessary.
+      # ============================================================
+
       - name: Update Foodican content
         env:
           YOUTUBE_CHANNEL_ID: 'UCE6VXOmQeNKBqVspyX5qoWA'
           YOUTUBE_HANDLE: '@thefoodican'
-          MAX_ITEMS: '100'
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          MAX_ITEMS: '100'
         run: |
           node scripts/update-content.js
+
+
+      # ============================================================
+      # VALIDATE GENERATED CONTENT
+      # ============================================================
 
       - name: Validate generated content
         run: |
@@ -129,22 +172,27 @@ jobs:
           const file =
             'data/content.json';
 
-          if (!fs.existsSync(file)) {
+          if (
+            !fs.existsSync(file)
+          ) {
             throw new Error(
               'data/content.json was not generated.'
             );
           }
 
-          const data =
-            JSON.parse(
-              fs.readFileSync(
-                file,
-                'utf8'
-              )
+          const raw =
+            fs.readFileSync(
+              file,
+              'utf8'
             );
 
+          const data =
+            JSON.parse(raw);
+
           if (
-            !Array.isArray(data.items)
+            !Array.isArray(
+              data.items
+            )
           ) {
             throw new Error(
               'content.json items is not an array.'
@@ -160,7 +208,8 @@ jobs:
           }
 
           for (
-            const item of data.items
+            const item
+            of data.items
           ) {
             if (
               !item.id ||
@@ -171,12 +220,59 @@ jobs:
                 `Invalid item: ${JSON.stringify(item)}`
               );
             }
+
+            const hasLatitude =
+              typeof item.latitude === 'number';
+
+            const hasLongitude =
+              typeof item.longitude === 'number';
+
+            /*
+             * Coordinates must either both exist or both be null.
+             */
+            if (
+              hasLatitude !==
+              hasLongitude
+            ) {
+              throw new Error(
+                `Latitude/longitude mismatch for ${item.id}`
+              );
+            }
+
+            if (
+              hasLatitude &&
+              (
+                item.latitude < -90 ||
+                item.latitude > 90
+              )
+            ) {
+              throw new Error(
+                `Invalid latitude for ${item.id}: ${item.latitude}`
+              );
+            }
+
+            if (
+              hasLongitude &&
+              (
+                item.longitude < -180 ||
+                item.longitude > 180
+              )
+            ) {
+              throw new Error(
+                `Invalid longitude for ${item.id}: ${item.longitude}`
+              );
+            }
           }
 
           console.log(
             `Validated ${data.items.length} content items.`
           );
           NODE
+
+
+      # ============================================================
+      # SHOW SUMMARY
+      # ============================================================
 
       - name: Show content summary
         run: |
@@ -191,8 +287,50 @@ jobs:
               )
             );
 
+          const mapped =
+            data.items.filter(
+              item =>
+                typeof item.latitude === 'number' &&
+                typeof item.longitude === 'number'
+            );
+
+          const youtubeMapped =
+            data.items.filter(
+              item =>
+                item.locationSource === 'youtube'
+            );
+
           console.log('');
-          console.log('Foodican content:');
+          console.log(
+            '========================================'
+          );
+          console.log(
+            '       FOODICAN CONTENT SUMMARY'
+          );
+          console.log(
+            '========================================'
+          );
+          console.log('');
+
+          console.log(
+            `Total videos: ${data.items.length}`
+          );
+
+          console.log(
+            `Mapped videos: ${mapped.length}`
+          );
+
+          console.log(
+            `YouTube-mapped videos: ${youtubeMapped.length}`
+          );
+
+          console.log(
+            `Unmapped videos: ${
+              data.items.length -
+              mapped.length
+            }`
+          );
+
           console.log('');
 
           data.items
@@ -204,31 +342,120 @@ jobs:
                 );
 
                 console.log(
-                  `   ${item.isShort ? 'SHORT' : 'VIDEO'}`
+                  `   ${
+                    item.isShort
+                      ? 'SHORT'
+                      : 'VIDEO'
+                  }`
                 );
 
                 console.log(
-                  `   ${item.url}`
+                  `   ${
+                    item.location ||
+                    'No location'
+                  }`
                 );
+
+                if (
+                  typeof item.latitude === 'number' &&
+                  typeof item.longitude === 'number'
+                ) {
+                  console.log(
+                    `   ${
+                      item.latitude
+                    }, ${
+                      item.longitude
+                    }`
+                  );
+                }
+
+                if (
+                  item.locationSource
+                ) {
+                  console.log(
+                    `   Source: ${
+                      item.locationSource
+                    }`
+                  );
+                }
 
                 console.log('');
               }
             );
           NODE
 
-      - name: Commit changes only when needed
+
+      # ============================================================
+      # DETERMINE WHETHER CONTENT CHANGED
+      # ============================================================
+
+      - name: Check for content changes
+        id: changes
         run: |
-          git config user.name 'Foodican Bot'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git diff --quiet -- data/content.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
 
-          git add data/content.json
+            echo ''
+            echo 'No content changes detected.'
+            echo 'Skipping commit and deployment.'
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
 
-          if git diff --cached --quiet; then
-            echo "No content changes detected."
-            exit 0
+            echo ''
+            echo 'Content changes detected.'
+            echo ''
+
+            git diff --stat -- data/content.json
           fi
+
+
+      # ============================================================
+      # COMMIT CONTENT
+      # ============================================================
+
+      - name: Commit content changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name \
+            'Foodican Bot'
+
+          git config user.email \
+            '41898282+github-actions[bot]@users.noreply.github.com'
+
+          git add \
+            data/content.json
 
           git commit \
             -m "chore: update Foodican content"
 
           git push
+
+
+      # ============================================================
+      # CONFIGURE GITHUB PAGES
+      # ============================================================
+
+      - name: Configure Pages
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/configure-pages@v5
+
+
+      # ============================================================
+      # PACKAGE WEBSITE
+      # ============================================================
+
+      - name: Upload site
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+
+      # ============================================================
+      # DEPLOY WEBSITE
+      # ============================================================
+
+      - name: Deploy Foodican
+        if: steps.changes.outputs.changed == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
