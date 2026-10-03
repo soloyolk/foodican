@@ -1,16 +1,23 @@
 /**
  * Foodican YouTube content updater
  *
- * Supports:
- *   - YouTube videos
- *   - YouTube Shorts
+ * Uses YouTube's public Atom channel feed.
  *
- * No YouTube API key required.
+ * Advantages:
+ *   - No YouTube API key
+ *   - No yt-dlp
+ *   - No YouTube login
+ *   - No cookies
+ *   - Works from GitHub Actions
+ *   - Works with YouTube Shorts
+ *
+ * The YouTube feed contains the channel's most recent
+ * uploads. Existing content is preserved so the site can
+ * accumulate older posts over time.
  */
 
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
 
 const CHANNEL_ID =
   process.env.YOUTUBE_CHANNEL_ID ||
@@ -23,54 +30,87 @@ const HANDLE =
 const MAX_ITEMS =
   Number(process.env.MAX_ITEMS || 100);
 
-const MAX_NEW_ITEMS =
-  Number(process.env.MAX_NEW_ITEMS || 20);
-
 const root =
   path.join(__dirname, '..');
 
 const outFile =
   path.join(root, 'data', 'content.json');
 
+const feedUrl =
+  `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`;
+
 const channelUrl =
   `https://www.youtube.com/channel/${CHANNEL_ID}`;
 
-const uploadsPlaylistId =
-  CHANNEL_ID.replace(/^UC/, 'UU');
 
-const uploadsUrl =
-  `https://www.youtube.com/playlist?list=${uploadsPlaylistId}`;
+/*
+ * ---------------------------------------------------------
+ * Helpers
+ * ---------------------------------------------------------
+ */
 
-function runYtDlp(args) {
-  try {
-    return execFileSync('yt-dlp', args, {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      maxBuffer: 100 * 1024 * 1024
-    });
-  } catch (err) {
-    const stderr = err.stderr
-      ? err.stderr.toString()
-      : '';
-
-    throw new Error(
-      `yt-dlp failed:\n${stderr || err.message}`
-    );
+function decodeXml(value) {
+  if (!value) {
+    return '';
   }
+
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'");
 }
 
-function loadExisting() {
-  if (!fs.existsSync(outFile)) {
-    return {
-      generatedAt: null,
-      source: {},
-      items: []
-    };
-  }
-
-  return JSON.parse(
-    fs.readFileSync(outFile, 'utf8')
+function stripHtml(value) {
+  return decodeXml(
+    String(value || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
   );
+}
+
+function escapeRegex(value) {
+  return value.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&'
+  );
+}
+
+function getTag(block, tagName) {
+  const regex =
+    new RegExp(
+      `<${escapeRegex(tagName)}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${escapeRegex(tagName)}>`,
+      'i'
+    );
+
+  const match =
+    block.match(regex);
+
+  return match
+    ? decodeXml(match[1].trim())
+    : '';
+}
+
+function getAttribute(
+  block,
+  tagName,
+  attribute
+) {
+  const regex =
+    new RegExp(
+      `<${escapeRegex(tagName)}[^>]*\\s${escapeRegex(attribute)}=["']([^"']+)["']`,
+      'i'
+    );
+
+  const match =
+    block.match(regex);
+
+  return match
+    ? decodeXml(match[1])
+    : '';
 }
 
 function score(text, words) {
@@ -85,16 +125,22 @@ function score(text, words) {
   return result;
 }
 
-function classify(title, description, tags = []) {
-  const text = [
-    title,
-    description,
-    ...tags
-  ]
-    .join(' ')
-    .toLowerCase();
 
-  const food =
+/*
+ * ---------------------------------------------------------
+ * Content classification
+ * ---------------------------------------------------------
+ */
+
+function classify(
+  title,
+  description
+) {
+  const text =
+    `${title} ${description}`
+      .toLowerCase();
+
+  const foodScore =
     score(text, [
       'food',
       'restaurant',
@@ -130,7 +176,7 @@ function classify(title, description, tags = []) {
       'mexican food'
     ]);
 
-  const tech =
+  const techScore =
     score(text, [
       'iphone',
       'ipad',
@@ -164,18 +210,31 @@ function classify(title, description, tags = []) {
       'gemini'
     ]);
 
-  if (food >= 2 && food > tech) {
+  if (
+    foodScore >= 2 &&
+    foodScore > techScore
+  ) {
     return 'food';
   }
 
-  if (tech >= 2) {
+  if (techScore >= 2) {
     return 'tech';
   }
 
   return 'life';
 }
 
-function extractLocation(title, description) {
+
+/*
+ * ---------------------------------------------------------
+ * Location detection
+ * ---------------------------------------------------------
+ */
+
+function extractLocation(
+  title,
+  description
+) {
   const text =
     `${title} ${description}`;
 
@@ -216,9 +275,11 @@ function extractLocation(title, description) {
 
   for (const place of places) {
     if (
-      text.toLowerCase().includes(
-        place.toLowerCase()
-      )
+      text
+        .toLowerCase()
+        .includes(
+          place.toLowerCase()
+        )
     ) {
       return place;
     }
@@ -227,199 +288,309 @@ function extractLocation(title, description) {
   return '';
 }
 
+
 /*
- * IMPORTANT:
+ * ---------------------------------------------------------
+ * Shorts detection
  *
- * We intentionally DO NOT use --flat-playlist here.
+ * The public Atom feed does not reliably expose duration,
+ * so we use explicit Shorts markers when available.
  *
- * We want yt-dlp to give us the actual video/Short
- * URLs and enough information to identify them.
+ * This includes:
+ *   #shorts
+ *   #short
+ *   youtube.com/shorts/
+ *
+ * If a Short doesn't have a marker, it still gets added
+ * to the site — it simply won't receive the SHORT badge.
+ * ---------------------------------------------------------
  */
-function discoverVideos() {
-  console.log(
-    `Discovering Foodican uploads...`
+
+function detectShort(
+  title,
+  description,
+  url
+) {
+  const text =
+    `${title} ${description}`
+      .toLowerCase();
+
+  return (
+    text.includes('#shorts') ||
+    text.includes('#short ') ||
+    text.endsWith('#short') ||
+    String(url)
+      .toLowerCase()
+      .includes('/shorts/')
   );
+}
 
-  const output =
-    runYtDlp([
-      '--dump-single-json',
-      '--skip-download',
-      '--no-warnings',
-      '--playlist-end',
-      String(MAX_ITEMS),
-      uploadsUrl
-    ]);
 
-  const playlist =
-    JSON.parse(output);
+/*
+ * ---------------------------------------------------------
+ * Fetch YouTube feed
+ * ---------------------------------------------------------
+ */
 
-  const entries =
-    Array.isArray(playlist.entries)
-      ? playlist.entries
-      : [];
-
+async function fetchFeed() {
+  console.log('');
   console.log(
-    `YouTube returned ${entries.length} uploads.`
+    `Fetching YouTube feed:`
   );
+  console.log(feedUrl);
+  console.log('');
 
-  return entries
-    .filter(entry =>
-      entry &&
-      entry.id
-    )
-    .map(entry => {
-      const url =
-        entry.url ||
-        entry.webpage_url ||
-        `https://www.youtube.com/watch?v=${entry.id}`;
-
-      return {
-        id: entry.id,
-        url
-      };
+  const response =
+    await fetch(feedUrl, {
+      headers: {
+        'User-Agent':
+          'Foodican GitHub Action/1.0'
+      }
     });
-}
 
-function getVideo(id, discoveredUrl) {
-  /*
-   * Prefer a Shorts URL when yt-dlp discovered one.
-   */
-  const url =
-    discoveredUrl.includes('/shorts/')
-      ? discoveredUrl
-      : `https://www.youtube.com/watch?v=${id}`;
-
-  console.log(
-    `Extracting: ${url}`
-  );
-
-  const output =
-    runYtDlp([
-      '--dump-single-json',
-      '--skip-download',
-      '--no-warnings',
-      url
-    ]);
-
-  return JSON.parse(output);
-}
-
-function convertVideo(info, discoveredUrl) {
-  const title =
-    info.title || '';
-
-  const description =
-    info.description || '';
-
-  const tags =
-    Array.isArray(info.tags)
-      ? info.tags.slice(0, 20)
-      : [];
-
-  let publishedAt = '';
-
-  if (info.upload_date) {
-    publishedAt =
-      `${info.upload_date.slice(0, 4)}-` +
-      `${info.upload_date.slice(4, 6)}-` +
-      `${info.upload_date.slice(6, 8)}` +
-      `T00:00:00Z`;
-  } else if (info.timestamp) {
-    publishedAt =
-      new Date(
-        info.timestamp * 1000
-      ).toISOString();
+  if (!response.ok) {
+    throw new Error(
+      `YouTube feed returned HTTP ${response.status}`
+    );
   }
 
-  const duration =
-    Number(info.duration || 0);
+  return response.text();
+}
 
-  /*
-   * YouTube/yt-dlp can explicitly tell us this is a
-   * Short. Duration is only the fallback.
-   */
-  const isShort =
-    discoveredUrl.includes('/shorts/') ||
-    info.webpage_url?.includes('/shorts/') ||
-    info.original_url?.includes('/shorts/') ||
-    (
-      duration > 0 &&
-      duration <= 60
-    );
 
-  const url =
-    isShort
-      ? `https://www.youtube.com/shorts/${info.id}`
-      : `https://www.youtube.com/watch?v=${info.id}`;
+/*
+ * ---------------------------------------------------------
+ * Parse Atom feed
+ * ---------------------------------------------------------
+ */
 
-  return {
-    id: info.id,
+function parseFeed(xml) {
+  const entries = [];
 
-    title,
+  const matches =
+    xml.match(
+      /<entry[\s\S]*?<\/entry>/gi
+    ) || [];
 
-    description,
+  for (const entry of matches) {
+    const videoId =
+      getTag(
+        entry,
+        'yt:videoId'
+      );
 
-    category:
-      classify(
+    const title =
+      stripHtml(
+        getTag(
+          entry,
+          'title'
+        )
+      );
+
+    const published =
+      getTag(
+        entry,
+        'published'
+      );
+
+    const updated =
+      getTag(
+        entry,
+        'updated'
+      );
+
+    const thumbnail =
+      getAttribute(
+        entry,
+        'media:thumbnail',
+        'url'
+      );
+
+    const description =
+      stripHtml(
+        getTag(
+          entry,
+          'media:description'
+        )
+      );
+
+    const link =
+      getAttribute(
+        entry,
+        'link',
+        'href'
+      ) ||
+      (
+        videoId
+          ? `https://www.youtube.com/watch?v=${videoId}`
+          : ''
+      );
+
+    const author =
+      stripHtml(
+        getTag(
+          entry,
+          'name'
+        )
+      );
+
+    if (
+      !videoId ||
+      !title
+    ) {
+      continue;
+    }
+
+    const isShort =
+      detectShort(
         title,
         description,
-        tags
-      ),
+        link
+      );
 
-    publishedAt,
+    entries.push({
+      id: videoId,
 
-    url,
+      title,
 
-    thumbnail:
-      info.thumbnail ||
-      `https://i.ytimg.com/vi/${info.id}/hqdefault.jpg`,
+      description,
 
-    location:
-      extractLocation(
-        title,
-        description
-      ),
+      publishedAt:
+        published ||
+        updated ||
+        '',
 
-    duration,
+      url:
+        isShort
+          ? `https://www.youtube.com/shorts/${videoId}`
+          : `https://www.youtube.com/watch?v=${videoId}`,
 
-    isShort,
+      thumbnail:
+        thumbnail ||
+        `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
 
-    type:
-      isShort
-        ? 'short'
-        : 'video',
+      category:
+        classify(
+          title,
+          description
+        ),
 
-    channel:
-      info.channel ||
-      info.uploader ||
-      '',
+      location:
+        extractLocation(
+          title,
+          description
+        ),
 
-    channelId:
-      info.channel_id ||
-      CHANNEL_ID,
+      isShort,
 
-    viewCount:
-      Number(info.view_count || 0),
+      type:
+        isShort
+          ? 'short'
+          : 'video',
 
-    likeCount:
-      Number(info.like_count || 0),
+      channel:
+        author ||
+        'Foodican',
 
-    tags
-  };
+      channelId:
+        CHANNEL_ID,
+
+      duration: 0,
+
+      viewCount: 0,
+
+      likeCount: 0,
+
+      tags: []
+    });
+  }
+
+  return entries;
 }
+
+
+/*
+ * ---------------------------------------------------------
+ * Load existing content
+ * ---------------------------------------------------------
+ */
+
+function loadExisting() {
+  if (
+    !fs.existsSync(outFile)
+  ) {
+    return {
+      generatedAt: null,
+
+      source: {
+        platform: 'youtube',
+        handle: HANDLE,
+        channelId: CHANNEL_ID,
+        channelUrl,
+        feedUrl
+      },
+
+      items: []
+    };
+  }
+
+  try {
+    return JSON.parse(
+      fs.readFileSync(
+        outFile,
+        'utf8'
+      )
+    );
+  } catch (error) {
+    throw new Error(
+      `Could not read existing content.json: ${error.message}`
+    );
+  }
+}
+
+
+/*
+ * ---------------------------------------------------------
+ * Normalize old/new items
+ * ---------------------------------------------------------
+ */
 
 function normalize(item) {
   return {
-    id: item.id || '',
-    title: item.title || '',
-    description: item.description || '',
-    category: item.category || 'life',
-    publishedAt: item.publishedAt || '',
-    url: item.url || '',
-    thumbnail: item.thumbnail || '',
-    location: item.location || '',
-    duration: Number(item.duration || 0),
-    isShort: Boolean(item.isShort),
+    id:
+      item.id || '',
+
+    title:
+      item.title || '',
+
+    description:
+      item.description || '',
+
+    category:
+      item.category || 'life',
+
+    publishedAt:
+      item.publishedAt || '',
+
+    url:
+      item.url || '',
+
+    thumbnail:
+      item.thumbnail || '',
+
+    location:
+      item.location || '',
+
+    duration:
+      Number(
+        item.duration || 0
+      ),
+
+    isShort:
+      Boolean(
+        item.isShort
+      ),
+
     type:
       item.type ||
       (
@@ -427,14 +598,25 @@ function normalize(item) {
           ? 'short'
           : 'video'
       ),
+
     channel:
-      item.channel || '',
+      item.channel ||
+      'Foodican',
+
     channelId:
-      item.channelId || CHANNEL_ID,
+      item.channelId ||
+      CHANNEL_ID,
+
     viewCount:
-      Number(item.viewCount || 0),
+      Number(
+        item.viewCount || 0
+      ),
+
     likeCount:
-      Number(item.likeCount || 0),
+      Number(
+        item.likeCount || 0
+      ),
+
     tags:
       Array.isArray(item.tags)
         ? item.tags
@@ -442,11 +624,24 @@ function normalize(item) {
   };
 }
 
+
+/*
+ * ---------------------------------------------------------
+ * Main
+ * ---------------------------------------------------------
+ */
+
 async function main() {
   console.log('');
-  console.log('======================================');
-  console.log('FOODICAN YOUTUBE UPDATER');
-  console.log('======================================');
+  console.log(
+    '========================================'
+  );
+  console.log(
+    'FOODICAN YOUTUBE FEED UPDATER'
+  );
+  console.log(
+    '========================================'
+  );
   console.log('');
 
   const existing =
@@ -457,93 +652,49 @@ async function main() {
       ? existing.items.map(normalize)
       : [];
 
-  const existingIds =
-    new Set(
-      existingItems.map(
-        item => item.id
-      )
-    );
-
   console.log(
     `Existing site items: ${existingItems.length}`
   );
 
   /*
-   * Discover uploads.
+   * Fetch public YouTube feed.
    */
-  const discovered =
-    discoverVideos();
+  const xml =
+    await fetchFeed();
 
-  if (!discovered.length) {
+  /*
+   * Parse uploads.
+   */
+  const feedItems =
+    parseFeed(xml);
+
+  console.log(
+    `YouTube feed items: ${feedItems.length}`
+  );
+
+  if (
+    feedItems.length === 0
+  ) {
     throw new Error(
-      'YouTube returned zero uploads. Existing content was preserved.'
+      'YouTube returned zero feed items. Existing content was NOT changed.'
     );
   }
 
   /*
-   * Only process videos we haven't already stored.
-   */
-  const newVideos =
-    discovered
-      .filter(video =>
-        !existingIds.has(video.id)
-      )
-      .slice(
-        0,
-        MAX_NEW_ITEMS
-      );
-
-  console.log(
-    `New uploads: ${newVideos.length}`
-  );
-
-  const newItems = [];
-
-  for (const video of newVideos) {
-    try {
-      const info =
-        getVideo(
-          video.id,
-          video.url
-        );
-
-      const item =
-        normalize(
-          convertVideo(
-            info,
-            video.url
-          )
-        );
-
-      if (
-        item.id &&
-        item.title &&
-        item.url
-      ) {
-        newItems.push(item);
-      }
-
-    } catch (err) {
-      console.warn(
-        `Failed to process ${video.id}:`
-      );
-
-      console.warn(
-        err.message
-      );
-    }
-  }
-
-  /*
-   * Merge without deleting anything already on
-   * the website.
+   * Merge feed with existing content.
+   *
+   * The feed only contains the latest uploads, so this
+   * allows the GitHub repository to retain older videos.
    */
   const merged =
     [
-      ...newItems,
+      ...feedItems,
       ...existingItems
     ];
 
+  /*
+   * Remove duplicate video IDs.
+   */
   const unique =
     Array.from(
       new Map(
@@ -554,6 +705,9 @@ async function main() {
       ).values()
     );
 
+  /*
+   * Sort newest first.
+   */
   const items =
     unique
       .filter(item =>
@@ -576,15 +730,14 @@ async function main() {
       );
 
   /*
-   * Never replace an established content file with
-   * a suspiciously empty result.
+   * Safety check.
    */
   if (
     existingItems.length > 0 &&
     items.length === 0
   ) {
     throw new Error(
-      'Safety check failed: generated zero items. Existing content was preserved.'
+      'Safety check failed: zero valid items were generated. Existing content was NOT changed.'
     );
   }
 
@@ -594,11 +747,16 @@ async function main() {
 
     source: {
       platform: 'youtube',
-      handle: HANDLE,
-      channelId: CHANNEL_ID,
+
+      handle:
+        HANDLE,
+
+      channelId:
+        CHANNEL_ID,
+
       channelUrl,
-      uploadsPlaylistId,
-      uploadsUrl
+
+      feedUrl
     },
 
     itemCount:
@@ -624,12 +782,27 @@ async function main() {
   );
 
   console.log('');
-  console.log('======================================');
-  console.log('UPDATE COMPLETE');
-  console.log(`Previously stored: ${existingItems.length}`);
-  console.log(`New videos:        ${newItems.length}`);
-  console.log(`Total stored:      ${items.length}`);
-  console.log('======================================');
+  console.log(
+    '========================================'
+  );
+  console.log(
+    'UPDATE COMPLETE'
+  );
+  console.log(
+    `Feed items:        ${feedItems.length}`
+  );
+  console.log(
+    `Previously stored: ${existingItems.length}`
+  );
+  console.log(
+    `Total stored:      ${items.length}`
+  );
+  console.log(
+    `Output:            ${outFile}`
+  );
+  console.log(
+    '========================================'
+  );
 }
 
 main().catch(error => {
@@ -637,6 +810,7 @@ main().catch(error => {
   console.error(
     'FOODICAN UPDATE FAILED'
   );
+  console.error('');
   console.error(
     error.message
   );
