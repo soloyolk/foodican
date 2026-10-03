@@ -1,8 +1,7 @@
 /**
  * Foodican content updater.
  *
- * It discovers the YouTube channel ID from the public @thefoodican channel page,
- * then reads the public YouTube Atom feed and writes data/content.json.
+ * It resolves the YouTube handle with yt-dlp, then reads the public YouTube Atom feed and writes data/content.json.
  * No YouTube API key is required for this RSS/Atom approach.
  *
  * Optional env vars:
@@ -13,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const handle = process.env.YOUTUBE_HANDLE || '@thefoodican';
+const channelId = process.env.YOUTUBE_CHANNEL_ID || '';
 const maxItems = Number(process.env.MAX_ITEMS || 30);
 const root = path.join(__dirname, '..');
 const outFile = path.join(root, 'data', 'content.json');
@@ -42,24 +42,47 @@ function classify(title, desc){
 }
 
 async function main(){
-  const channelPage = await getText(`https://www.youtube.com/${handle}`);
-  const channelId = firstMatch(channelPage,[
-    /<meta[^>]+itemprop="channelId"[^>]+content="([^"]+)"/i,
-    /"channelId":"([^"]+)"/i,
-    /"externalId":"([^"]+)"/i
-  ]);
-  if(!channelId) throw new Error('Could not discover YouTube channel ID. Set YOUTUBE_CHANNEL_ID in the workflow environment.');
-  const feed = await getText(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
+  let resolvedChannelId = channelId;
+
+  // Prefer a fixed channel ID when supplied. Otherwise resolve the handle
+  // through yt-dlp, which is much more resilient to YouTube page markup changes.
+  if (!resolvedChannelId) {
+    const { execFileSync } = require('child_process');
+    try {
+      resolvedChannelId = execFileSync('yt-dlp', [
+        '--flat-playlist', '--playlist-end', '1', '--print', 'channel_id',
+        `https://www.youtube.com/${handle}`
+      ], { encoding: 'utf8' }).trim().split(/\r?\n/).find(Boolean) || '';
+    } catch (err) {
+      throw new Error(`Could not resolve ${handle} to a YouTube channel ID. ${err.message}`);
+    }
+  }
+
+  if (!resolvedChannelId || !/^UC[\w-]{20,}$/.test(resolvedChannelId)) {
+    throw new Error(`Invalid YouTube channel ID: ${resolvedChannelId || '(empty)'}`);
+  }
+
+  console.log(`Using YouTube channel ${resolvedChannelId}`);
+  const feed = await getText(`https://www.youtube.com/feeds/videos.xml?channel_id=${resolvedChannelId}`);
   const items=atomEntries(feed).map(x=>{
     const title=tag(x,'title');
     const description=tag(x,'media:description')||tag(x,'description');
     const published=tag(x,'published');
     const videoId=tag(x,'yt:videoId');
-    return {id:videoId||title,title,description,category:classify(title,description),publishedAt:published,url:videoId?`https://www.youtube.com/watch?v=${videoId}`:entryLink(x),thumbnail:entryThumb(x),location:''};
+    return {
+      id:videoId||title,
+      title,
+      description,
+      category:classify(title,description),
+      publishedAt:published,
+      url:videoId?`https://www.youtube.com/watch?v=${videoId}`:entryLink(x),
+      thumbnail:videoId?`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`:entryThumb(x),
+      location:''
+    };
   }).filter(x=>x.title).slice(0,maxItems);
-  const payload={generatedAt:new Date().toISOString(),items};
+
+  const payload={generatedAt:new Date().toISOString(),source:{platform:'youtube',handle,channelId:resolvedChannelId},items};
   fs.writeFileSync(outFile,JSON.stringify(payload,null,2)+'\n');
   console.log(`Updated ${items.length} YouTube items.`);
 }
-
 main().catch(err=>{console.error(err);process.exit(1);});

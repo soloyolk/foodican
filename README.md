@@ -23,9 +23,9 @@ A lightweight, GitHub Pages-ready website for Foodican.
 
 ## Automatic content
 
-The scheduled workflow runs every 6 hours. It discovers the public YouTube channel behind `@thefoodican`, reads the channel's public Atom feed, and updates `data/content.json`.
+The scheduled workflow runs every 6 hours. It resolves the public YouTube channel behind `@thefoodican` with `yt-dlp`, then reads the channel's public Atom feed, and updates `data/content.json`.
 
-If YouTube changes the public channel-page markup and automatic channel-ID discovery stops working, add the channel ID to the workflow and change the updater to use it directly. The rest of the site does not need to change.
+The workflow can resolve the handle automatically. If you ever want to pin the channel permanently, set `YOUTUBE_CHANNEL_ID` in the workflow environment to the channel ID beginning with `UC`.
 
 ## Instagram + TikTok
 
