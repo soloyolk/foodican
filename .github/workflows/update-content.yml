@@ -117,6 +117,7 @@ jobs:
           YOUTUBE_CHANNEL_ID: 'UCE6VXOmQeNKBqVspyX5qoWA'
           YOUTUBE_HANDLE: '@thefoodican'
           MAX_ITEMS: '100'
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
           node scripts/update-content.js
 
