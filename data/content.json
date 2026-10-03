@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-03T07:45:41.661Z",
+  "generatedAt": "2026-10-03T07:58:58.770Z",
   "source": {
     "platform": "youtube",
     "handle": "@thefoodican",
@@ -70,8 +70,8 @@
       "viewCount": 0,
       "likeCount": 0,
       "tags": [],
-      "latitude": null,
-      "longitude": null,
+      "latitude": 0,
+      "longitude": 0,
       "locationPrecision": "",
       "locationSource": ""
     },
