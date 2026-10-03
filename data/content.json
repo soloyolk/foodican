@@ -1,15 +1,13 @@
 {
-  "generatedAt": null,
-  "items": [
-    {
-      "id": "welcome",
-      "title": "Welcome to Foodican",
-      "description": "Good eats, cool tech, and little life upgrades — all in one place.",
-      "category": "life",
-      "publishedAt": "2026-10-01T00:00:00Z",
-      "url": "https://www.youtube.com/@thefoodican",
-      "thumbnail": "",
-      "location": ""
-    }
-  ]
+  "generatedAt": "2026-10-03T06:51:09.114Z",
+  "source": {
+    "platform": "youtube",
+    "handle": "@thefoodican",
+    "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
+    "channelUrl": "https://www.youtube.com/channel/UCE6VXOmQeNKBqVspyX5qoWA",
+    "uploadsPlaylistId": "UUE6VXOmQeNKBqVspyX5qoWA",
+    "uploadsUrl": "https://www.youtube.com/playlist?list=UUE6VXOmQeNKBqVspyX5qoWA"
+  },
+  "itemCount": 0,
+  "items": []
 }
