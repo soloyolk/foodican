@@ -50,4 +50,3 @@ jobs:
             -m "chore: update Foodican content"
 
           git push
-```
