@@ -2,502 +2,726 @@ const fs = require('fs');
 const path = require('path');
 
 const CHANNEL_ID =
-  process.env.YOUTUBE_CHANNEL_ID || 'UCE6VXOmQeNKBqVspyX5qoWA';
+  process.env.YOUTUBE_CHANNEL_ID ||
+  'UCE6VXOmQeNKBqVspyX5qoWA';
 
 const HANDLE =
-  process.env.YOUTUBE_HANDLE || '@thefoodican';
+  process.env.YOUTUBE_HANDLE ||
+  '@thefoodican';
 
-const API_KEY = process.env.YOUTUBE_API_KEY;
+const API_KEY =
+  process.env.YOUTUBE_API_KEY;
 
 const MAX_ITEMS =
   Number(process.env.MAX_ITEMS || 100);
 
+const OUTPUT_FILE =
+  path.join(
+    process.cwd(),
+    'data',
+    'content.json'
+  );
+
 const FEED_URL =
   `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`;
 
-const OUTPUT_FILE =
-  path.join(__dirname, '..', 'data', 'content.json');
+const YOUTUBE_API_URL =
+  'https://www.googleapis.com/youtube/v3/videos';
 
-const MAX_GEOCODES_PER_RUN = 4;
-const GEOCODE_DELAY_MS = 15000;
+const NOMINATIM_URL =
+  'https://nominatim.openstreetmap.org/search';
 
-const NOMINATIM_USER_AGENT =
+const USER_AGENT =
   'Foodican/1.0 (automated content map updater)';
 
-if (!API_KEY) {
-  throw new Error(
-    'YOUTUBE_API_KEY is missing. Add it as a GitHub Actions secret.'
+const GEOCODE_DELAY_MS = 15000;
+const MAX_GEOCODES_PER_RUN = 4;
+
+
+/* ================================================================
+   HELPERS
+   ================================================================ */
+
+function sleep(ms) {
+  return new Promise(resolve =>
+    setTimeout(resolve, ms)
   );
 }
 
-async function fetchText(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'User-Agent': 'Foodican GitHub Action/1.0',
-      ...(options.headers || {})
-    }
-  });
 
-  if (!response.ok) {
-    throw new Error(
-      `HTTP ${response.status} while fetching ${url}`
-    );
-  }
+function cleanText(value) {
+  if (!value) return '';
 
-  return response.text();
+  return String(value)
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-async function fetchJson(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      'User-Agent': 'Foodican GitHub Action/1.0',
-      ...(options.headers || {})
-    }
-  });
 
-  if (!response.ok) {
-    const body = await response.text();
-
-    throw new Error(
-      `HTTP ${response.status} while fetching ${url}: ${body.slice(0, 500)}`
-    );
-  }
-
-  return response.json();
-}
-
-function decodeXml(value = '') {
-  return value
+function escapeXml(value) {
+  return String(value)
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'");
+    .replace(/&#39;/g, "'");
 }
 
-function getXmlValue(entry, tag) {
-  const match = entry.match(
-    new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`)
-  );
 
-  return match ? decodeXml(match[1].trim()) : '';
+function getXmlValue(xml, tag) {
+  const regex =
+    new RegExp(
+      `<${tag}>([\\s\\S]*?)<\\/${tag}>`
+    );
+
+  const match = xml.match(regex);
+
+  return match
+    ? escapeXml(match[1])
+    : '';
 }
 
-function getXmlAttribute(entry, tag, attribute) {
-  const match = entry.match(
-    new RegExp(`<${tag}\\b[^>]*\\b${attribute}="([^"]*)"`)
-  );
 
-  return match ? decodeXml(match[1]) : '';
+function getXmlAttribute(xml, tag, attribute) {
+  const regex =
+    new RegExp(
+      `<${tag}[^>]*\\s${attribute}="([^"]*)"[^>]*>`
+    );
+
+  const match = xml.match(regex);
+
+  return match
+    ? escapeXml(match[1])
+    : '';
 }
 
-function parseFeed(xml) {
-  const entries = xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
 
-  return entries
-    .map(entry => {
-      const videoId = getXmlValue(entry, 'yt:videoId');
-      const title = getXmlValue(entry, 'media:title');
-      const description = getXmlValue(entry, 'media:description');
-      const published = getXmlValue(entry, 'published');
+function detectShort(item, existing) {
+  /*
+   * Preserve the previously detected value when available.
+   * This is important because the public Atom feed may expose
+   * Shorts through a regular watch URL.
+   */
+  if (
+    existing &&
+    typeof existing.isShort === 'boolean'
+  ) {
+    return existing.isShort;
+  }
 
-      const url =
-        getXmlAttribute(entry, 'link', 'href') ||
-        `https://www.youtube.com/watch?v=${videoId}`;
-
-      return {
-        id: videoId,
-        title,
-        description,
-        published,
-        url
-      };
-    })
-    .filter(item => item.id && item.title)
-    .slice(0, MAX_ITEMS);
-}
-
-function detectShort(item) {
-  const text =
-    `${item.url || ''} ${item.title || ''} ${item.description || ''}`
-      .toLowerCase();
+  const url =
+    item.url || '';
 
   return (
-    text.includes('/shorts/') ||
-    /\bshorts?\b/.test(text)
+    url.includes('/shorts/') ||
+    item.title?.toLowerCase().includes('#shorts')
   );
 }
 
-function detectCategory(item) {
-  const text =
-    `${item.title || ''} ${item.description || ''}`
-      .toLowerCase();
 
-  const foodTerms = [
+/* ================================================================
+   CATEGORY DETECTION
+   ================================================================ */
+
+function detectCategory(title, description) {
+  const text =
+    `${title} ${description}`.toLowerCase();
+
+  /*
+   * Food gets priority over generic lifestyle words.
+   */
+  const foodKeywords = [
     'restaurant',
     'food',
     'eat',
     'eating',
     'menu',
     'dish',
-    'dishes',
     'pizza',
     'burger',
     'sushi',
-    'seafood',
-    'noodle',
     'ramen',
+    'noodle',
+    'seafood',
+    'steak',
     'bbq',
     'barbecue',
-    'buffet',
+    'chicken',
     'pasta',
     'taco',
     'tacos',
-    'korean',
-    'vietnamese',
-    'chinese',
-    'japanese',
-    'italian',
-    'mexican',
-    'cafe',
-    'coffee',
+    'pho',
+    'buffet',
     'bakery',
-    'grill',
-    'steak',
+    'cafe',
+    'café',
+    'coffee',
+    'dessert',
+    'ice cream',
+    'boba',
     'brunch',
     'lunch',
     'dinner',
-    'breakfast'
+    'breakfast',
+    'chef',
+    'kitchen',
+    'grill',
+    'olive garden',
+    'kim son',
+    'kim sơn'
   ];
 
-  const techTerms = [
+  const techKeywords = [
+    'tech',
+    'technology',
     'iphone',
     'android',
     'apple',
-    'google',
+    'samsung',
     'computer',
     'laptop',
     'phone',
-    'technology',
-    'tech',
+    'software',
+    ' ai ',
     'gadget',
-    'ai',
-    'software'
+    'device',
+    'keyboard',
+    'monitor',
+    'camera'
   ];
 
-  const travelTerms = [
+  const travelKeywords = [
     'travel',
+    'trip',
     'hotel',
-    'resort',
+    'vacation',
     'airport',
     'flight',
-    'vacation',
-    'trip',
-    'tour'
+    'resort',
+    'tour',
+    'visit',
+    'destination'
   ];
 
-  const lifeTerms = [
-    'life',
-    'family',
-    'home',
-    'adventure',
-    'daily'
-  ];
-
-  if (foodTerms.some(term => text.includes(term))) {
+  if (
+    foodKeywords.some(keyword =>
+      text.includes(keyword)
+    )
+  ) {
     return 'food';
   }
 
-  if (techTerms.some(term => text.includes(term))) {
+  if (
+    techKeywords.some(keyword =>
+      text.includes(keyword)
+    )
+  ) {
     return 'tech';
   }
 
-  if (travelTerms.some(term => text.includes(term))) {
+  if (
+    travelKeywords.some(keyword =>
+      text.includes(keyword)
+    )
+  ) {
     return 'travel';
   }
 
-  if (lifeTerms.some(term => text.includes(term))) {
-    return 'life';
-  }
-
-  return 'food';
+  return 'life';
 }
 
-function locationFromHashtag(text) {
-  const hashtags = text.match(/#[a-z0-9_-]+/gi) || [];
 
-  for (const hashtag of hashtags) {
-    const value = hashtag
-      .replace(/^#/, '')
-      .replace(/_/g, ' ')
-      .replace(/-/g, ' ')
-      .trim();
+/* ================================================================
+   LOCATION FALLBACK DETECTION
+   ================================================================ */
 
-    if (
-      /\b(tx|texas|ca|california|ny|new york|fl|florida)\b/i.test(value)
-    ) {
-      return value;
-    }
+function looksLikeVenue(value) {
+  if (!value) return false;
 
-    if (/^[a-z]+tx$/i.test(value)) {
-      return value.replace(/tx$/i, '') + ', TX';
-    }
+  const text =
+    cleanText(value);
 
-    if (/^[a-z]+ca$/i.test(value)) {
-      return value.replace(/ca$/i, '') + ', CA';
-    }
+  if (text.length < 3) {
+    return false;
   }
 
-  return '';
-}
-
-function detectLocation(text = '') {
-  // ZIP code
-  const zipMatch = text.match(/\b\d{5}(?:-\d{4})?\b/);
-
-  if (zipMatch) {
-    return zipMatch[0];
-  }
-
-  // Explicit hashtags
-  const hashtagLocation = locationFromHashtag(text);
-
-  if (hashtagLocation) {
-    return hashtagLocation;
-  }
-
-  // City + state patterns.
-  //
-  // Deliberately require the city portion to begin with a capital letter
-  // so prose such as "Craving some seafood, IN" is not treated as
-  // "some seafood, Indiana".
-  const cityStateMatch = text.match(
-    /\b([A-Z][A-Za-z.'’-]*(?:\s+[A-Z][A-Za-z.'’-]*){0,4}),\s*(TX|CA|NY|FL|AZ|CO|WA|IL|GA|NC|SC|VA|TN|OK|PA|NJ|MA|MI|OH|IN|MD|MO|MN|WI|OR|NV|UT|KS|AR|AL|LA|MS|KY|CT|IA|NE|NM|ID|HI|AK)\b/
-  );
-
-  if (cityStateMatch) {
-    return `${cityStateMatch[1]}, ${cityStateMatch[2]}`;
-  }
-
-  // Full state names
-  const stateMatch = text.match(
-    /\b(Texas|California|New York|Florida|Arizona|Colorado|Washington|Illinois|Georgia|North Carolina|South Carolina|Virginia|Tennessee|Oklahoma|Pennsylvania|New Jersey|Massachusetts|Michigan|Ohio|Maryland|Missouri|Minnesota|Wisconsin|Oregon|Nevada|Utah|Kansas|Arkansas|Alabama|Louisiana|Mississippi|Kentucky|Connecticut|Iowa|Nebraska|New Mexico|Idaho|Hawaii|Alaska)\b/i
-  );
-
-  if (stateMatch) {
-    return stateMatch[1];
-  }
-
-  // Common cities
-  const cities = [
-    'McKinney',
-    'Frisco',
-    'Plano',
-    'Dallas',
-    'Houston',
-    'Austin',
-    'San Antonio',
-    'Fort Worth',
-    'Arlington',
-    'Irving',
-    'Richardson',
-    'Allen',
-    'Prosper',
-    'Carrollton',
-    'Lewisville',
-    'Denton',
-    'Atlanta',
-    'Chicago',
-    'Los Angeles',
-    'San Diego',
-    'San Francisco',
-    'New York',
-    'Miami',
-    'Orlando',
-    'Tampa',
-    'Las Vegas',
-    'Seattle',
-    'Boston',
-    'Philadelphia',
-    'Phoenix',
-    'Denver'
-  ];
-
-  const lower = text.toLowerCase();
-
-  for (const city of cities) {
-    if (lower.includes(city.toLowerCase())) {
-      return city;
-    }
-  }
-
-  return '';
-}
-
-function normalizeLocation(location = '') {
-  return location
-    .replace(/\s+/g, ' ')
-    .replace(/\s*,\s*/g, ', ')
-    .trim();
-}
-
-function normalizeYouTubeLocation(description = '') {
-  return normalizeLocation(description);
-}
-
-async function fetchYouTubeLocations(videoIds) {
-  const results = new Map();
-
-  if (!videoIds.length) {
-    return results;
-  }
-
-  // YouTube allows up to 50 IDs per videos.list request.
-  for (let i = 0; i < videoIds.length; i += 50) {
-    const batch = videoIds.slice(i, i + 50);
-
-    const params = new URLSearchParams({
-      part: 'snippet,recordingDetails',
-      id: batch.join(','),
-      key: API_KEY
-    });
-
-    const url =
-      `https://www.googleapis.com/youtube/v3/videos?${params}`;
-
-    const data = await fetchJson(url);
-
-    for (const video of data.items || []) {
-      const recording = video.recordingDetails || {};
-      const location = recording.location;
-
-      if (
-        location &&
-        Number.isFinite(Number(location.latitude)) &&
-        Number.isFinite(Number(location.longitude))
-      ) {
-        results.set(video.id, {
-          location: normalizeYouTubeLocation(
-            recording.locationDescription || ''
-          ),
-          latitude: Number(location.latitude),
-          longitude: Number(location.longitude),
-          locationPrecision: 'exact',
-          locationSource: 'youtube'
-        });
-      }
-    }
-  }
-
-  return results;
-}
-
-function mergeItem(oldItem, freshItem, youtubeLocations) {
-  const youtubeLocation = youtubeLocations.get(freshItem.id);
-
-  if (youtubeLocation) {
-    return {
-      ...oldItem,
-      ...freshItem,
-      ...youtubeLocation
-    };
-  }
-
-  const detectedLocation =
-    normalizeLocation(
-      detectLocation(
-        `${freshItem.title || ''}\n${freshItem.description || ''}`
-      )
-    );
-
-  const oldLocation =
-    normalizeLocation(oldItem?.location || '');
-
-  const sameLocation =
-    detectedLocation &&
-    oldLocation &&
-    detectedLocation.toLowerCase() === oldLocation.toLowerCase();
-
-  return {
-    ...oldItem,
-    ...freshItem,
-    location:
-      detectedLocation ||
-      oldItem?.location ||
-      '',
-    latitude:
-      sameLocation && Number.isFinite(oldItem?.latitude)
-        ? oldItem.latitude
-        : oldItem?.latitude ?? null,
-    longitude:
-      sameLocation && Number.isFinite(oldItem?.longitude)
-        ? oldItem.longitude
-        : oldItem?.longitude ?? null,
-    locationPrecision:
-      sameLocation && oldItem?.locationPrecision
-        ? oldItem.locationPrecision
-        : oldItem?.locationPrecision || null,
-    locationSource:
-      sameLocation && oldItem?.locationSource
-        ? oldItem.locationSource
-        : oldItem?.locationSource || null
-  };
-}
-
-function looksLikeVenue(title = '') {
-  const text = title.toLowerCase();
-
-  const venueTerms = [
+  const venueWords = [
     'restaurant',
     'grill',
     'cafe',
     'café',
+    'bar',
+    'bakery',
+    'market',
     'kitchen',
     'buffet',
+    'pizza',
     'sushi',
     'seafood',
-    'steakhouse',
-    'barbecue',
+    'steak',
+    'coffee',
+    'brew',
     'bbq',
-    'pizza',
-    'bakery',
-    'olive garden',
-    'fish city',
-    'yohe',
-    'kim sơn',
-    'kim son'
+    'barbecue',
+    'garden'
   ];
 
-  return venueTerms.some(term => text.includes(term));
+  const lower =
+    text.toLowerCase();
+
+  return venueWords.some(
+    word =>
+      lower.includes(word)
+  );
 }
 
-async function geocode(query) {
-  const url =
-    'https://nominatim.openstreetmap.org/search?' +
-    new URLSearchParams({
-      q: query,
-      format: 'json',
-      limit: '1',
-      addressdetails: '1'
-    });
 
-  const data = await fetchJson(url, {
-    headers: {
-      'User-Agent': NOMINATIM_USER_AGENT
+function detectLocation(title, description) {
+  const combined =
+    `${title}\n${description}`;
+
+  /*
+   * City, ST
+   *
+   * Require the city to begin with a capital letter.
+   * This prevents prose such as:
+   *
+   * "Craving some seafood, IN"
+   *
+   * from becoming a fake location.
+   */
+  const cityStateRegex =
+    /\b([A-Z][A-Za-zÀ-ÿ'’.\- ]{2,40}),\s*([A-Z]{2})\b/g;
+
+  let match;
+
+  while (
+    (match = cityStateRegex.exec(combined))
+  ) {
+    const city =
+      cleanText(match[1]);
+
+    const state =
+      cleanText(match[2]);
+
+    if (
+      city.length < 3 ||
+      city.split(' ').length > 6
+    ) {
+      continue;
     }
-  });
 
-  if (!Array.isArray(data) || !data.length) {
+    return `${city}, ${state}`;
+  }
+
+  /*
+   * Explicit "in CITY" or "at VENUE".
+   */
+  const inRegex =
+    /\b(?:in|at)\s+([A-Z][A-Za-zÀ-ÿ'’.\- ]{2,50})/;
+
+  const inMatch =
+    combined.match(inRegex);
+
+  if (inMatch) {
+    const candidate =
+      cleanText(inMatch[1]);
+
+    if (
+      candidate &&
+      candidate.length <= 60
+    ) {
+      return candidate;
+    }
+  }
+
+  /*
+   * If the title itself clearly looks like a venue,
+   * use it as a final fallback.
+   */
+  if (
+    looksLikeVenue(title)
+  ) {
+    return cleanText(title);
+  }
+
+  return '';
+}
+
+
+/* ================================================================
+   YOUTUBE PUBLIC ATOM FEED
+   ================================================================ */
+
+async function fetchFeed() {
+  console.log(
+    `Fetching YouTube feed for ${HANDLE}...`
+  );
+
+  const response =
+    await fetch(
+      FEED_URL,
+      {
+        headers: {
+          'User-Agent':
+            'Foodican GitHub Action/1.0'
+        }
+      }
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      `YouTube feed returned HTTP ${response.status}`
+    );
+  }
+
+  return response.text();
+}
+
+
+function parseFeed(xml) {
+  const entries =
+    xml.match(
+      /<entry>[\s\S]*?<\/entry>/g
+    ) || [];
+
+  return entries
+    .slice(0, MAX_ITEMS)
+    .map(entry => {
+      const id =
+        getXmlValue(
+          entry,
+          'yt:videoId'
+        );
+
+      const title =
+        getXmlValue(
+          entry,
+          'title'
+        );
+
+      const publishedAt =
+        getXmlValue(
+          entry,
+          'published'
+        );
+
+      const updatedAt =
+        getXmlValue(
+          entry,
+          'updated'
+        );
+
+      const description =
+        getXmlValue(
+          entry,
+          'media:description'
+        );
+
+      const thumbnail =
+        getXmlAttribute(
+          entry,
+          'media:thumbnail',
+          'url'
+        );
+
+      const link =
+        getXmlAttribute(
+          entry,
+          'link',
+          'href'
+        );
+
+      return {
+        id,
+
+        title:
+          cleanText(title),
+
+        publishedAt,
+
+        updatedAt,
+
+        description,
+
+        thumbnail,
+
+        url:
+          link ||
+          `https://www.youtube.com/watch?v=${id}`
+      };
+    })
+    .filter(
+      item => item.id
+    );
+}
+
+
+/* ================================================================
+   EXISTING CONTENT
+   ================================================================ */
+
+function loadExistingContent() {
+  if (
+    !fs.existsSync(
+      OUTPUT_FILE
+    )
+  ) {
+    return {
+      generatedAt: null,
+      channelId: CHANNEL_ID,
+      channelHandle: HANDLE,
+      items: []
+    };
+  }
+
+  try {
+    return JSON.parse(
+      fs.readFileSync(
+        OUTPUT_FILE,
+        'utf8'
+      )
+    );
+  } catch (error) {
+    console.warn(
+      `Could not parse existing content.json: ${error.message}`
+    );
+
+    return {
+      generatedAt: null,
+      channelId: CHANNEL_ID,
+      channelHandle: HANDLE,
+      items: []
+    };
+  }
+}
+
+
+/* ================================================================
+   YOUTUBE DATA API
+   ================================================================ */
+
+async function fetchYouTubeLocations(videoIds) {
+  /*
+   * CRITICAL OPTIMIZATION:
+   *
+   * This function is NEVER called unless there are new videos.
+   */
+  if (!videoIds.length) {
+    console.log(
+      'No new videos. Skipping YouTube Data API.'
+    );
+
+    return new Map();
+  }
+
+  if (!API_KEY) {
+    throw new Error(
+      'YOUTUBE_API_KEY is not configured.'
+    );
+  }
+
+  console.log(
+    `Checking YouTube location metadata for ${videoIds.length} new video(s)...`
+  );
+
+  const locations =
+    new Map();
+
+  /*
+   * YouTube supports multiple video IDs in a single request.
+   */
+  const BATCH_SIZE = 50;
+
+  for (
+    let i = 0;
+    i < videoIds.length;
+    i += BATCH_SIZE
+  ) {
+    const batch =
+      videoIds.slice(
+        i,
+        i + BATCH_SIZE
+      );
+
+    const url =
+      new URL(
+        YOUTUBE_API_URL
+      );
+
+    url.searchParams.set(
+      'part',
+      'snippet,recordingDetails'
+    );
+
+    url.searchParams.set(
+      'id',
+      batch.join(',')
+    );
+
+    url.searchParams.set(
+      'key',
+      API_KEY
+    );
+
+    const response =
+      await fetch(url);
+
+    if (!response.ok) {
+      const body =
+        await response.text();
+
+      throw new Error(
+        `YouTube Data API returned HTTP ${response.status}: ${body}`
+      );
+    }
+
+    const data =
+      await response.json();
+
+    for (
+      const video
+      of data.items || []
+    ) {
+      const recording =
+        video.recordingDetails;
+
+      const coordinates =
+        recording?.location;
+
+      const description =
+        cleanText(
+          recording?.locationDescription
+        );
+
+      if (
+        coordinates &&
+        Number.isFinite(
+          Number(
+            coordinates.latitude
+          )
+        ) &&
+        Number.isFinite(
+          Number(
+            coordinates.longitude
+          )
+        )
+      ) {
+        locations.set(
+          video.id,
+          {
+            location:
+              description ||
+              cleanText(
+                video.snippet?.title
+              ),
+
+            latitude:
+              Number(
+                coordinates.latitude
+              ),
+
+            longitude:
+              Number(
+                coordinates.longitude
+              ),
+
+            locationPrecision:
+              'exact',
+
+            locationSource:
+              'youtube'
+          }
+        );
+      }
+    }
+  }
+
+  console.log(
+    `YouTube locations found: ${locations.size}`
+  );
+
+  for (
+    const [
+      id,
+      location
+    ]
+    of locations
+  ) {
+    console.log(
+      `  ${id}: ${location.location} (${location.latitude}, ${location.longitude})`
+    );
+  }
+
+  return locations;
+}
+
+
+/* ================================================================
+   GEOCODING FALLBACK
+   ================================================================ */
+
+async function geocodeLocation(location) {
+  if (!location) {
     return null;
   }
 
-  const result = data[0];
+  const url =
+    new URL(
+      NOMINATIM_URL
+    );
 
-  const latitude = Number(result.lat);
-  const longitude = Number(result.lon);
+  url.searchParams.set(
+    'q',
+    location
+  );
+
+  url.searchParams.set(
+    'format',
+    'jsonv2'
+  );
+
+  url.searchParams.set(
+    'limit',
+    '1'
+  );
+
+  const response =
+    await fetch(
+      url,
+      {
+        headers: {
+          'User-Agent':
+            USER_AGENT
+        }
+      }
+    );
+
+  if (!response.ok) {
+    console.warn(
+      `Geocoding failed for "${location}": HTTP ${response.status}`
+    );
+
+    return null;
+  }
+
+  const results =
+    await response.json();
+
+  if (
+    !results.length
+  ) {
+    return null;
+  }
+
+  const result =
+    results[0];
+
+  const latitude =
+    Number(result.lat);
+
+  const longitude =
+    Number(result.lon);
 
   if (
     !Number.isFinite(latitude) ||
@@ -508,224 +732,446 @@ async function geocode(query) {
 
   return {
     latitude,
+
     longitude,
-    locationPrecision: 'geocoded',
-    locationSource: 'nominatim'
+
+    locationPrecision:
+      'city',
+
+    locationSource:
+      'geocoding'
   };
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+
+/* ================================================================
+   CONTENT COMPARISON
+   ================================================================ */
+
+function normalizeForComparison(data) {
+  /*
+   * generatedAt is intentionally excluded.
+   *
+   * This allows us to determine whether the actual content
+   * changed without causing a deployment every six hours.
+   */
+  return JSON.stringify(
+    {
+      channelId:
+        data.channelId,
+
+      channelHandle:
+        data.channelHandle,
+
+      items:
+        data.items
+    }
+  );
 }
 
-async function geocodeMissingLocations(items) {
-  let geocodesUsed = 0;
 
-  for (const item of items) {
-    if (geocodesUsed >= MAX_GEOCODES_PER_RUN) {
-      break;
-    }
+/* ================================================================
+   BUILD CONTENT
+   ================================================================ */
 
-    if (!item.location) {
-      continue;
-    }
+async function buildContent() {
+  const existing =
+    loadExistingContent();
 
-    if (
-      Number.isFinite(item.latitude) &&
-      Number.isFinite(item.longitude)
-    ) {
-      continue;
-    }
-
-    let result = null;
-
-    if (looksLikeVenue(item.title)) {
-      const venueQuery =
-        `${item.title}, ${item.location}, USA`;
-
-      console.log(
-        `Geocoding venue: ${venueQuery}`
-      );
-
-      result = await geocode(venueQuery);
-
-      geocodesUsed++;
-
-      if (result) {
-        Object.assign(item, result);
-        continue;
-      }
-
-      await sleep(GEOCODE_DELAY_MS);
-    }
-
-    const locationQuery =
-      `${item.location}, USA`;
-
-    console.log(
-      `Geocoding location: ${locationQuery}`
+  const existingById =
+    new Map(
+      existing.items.map(
+        item => [
+          item.id,
+          item
+        ]
+      )
     );
 
-    result = await geocode(locationQuery);
+  /*
+   * STEP 1:
+   * Free YouTube Atom feed.
+   */
+  const feedXml =
+    await fetchFeed();
 
-    geocodesUsed++;
+  const feedItems =
+    parseFeed(feedXml);
 
-    if (result) {
-      Object.assign(item, result);
-    }
-
-    if (geocodesUsed < MAX_GEOCODES_PER_RUN) {
-      await sleep(GEOCODE_DELAY_MS);
-    }
+  if (
+    !feedItems.length
+  ) {
+    throw new Error(
+      'YouTube feed contained zero videos.'
+    );
   }
-
-  return items;
-}
-
-async function main() {
-  console.log(`Fetching YouTube feed for ${HANDLE}...`);
-
-  const xml = await fetchText(FEED_URL);
-
-  const feedItems = parseFeed(xml);
 
   console.log(
     `Found ${feedItems.length} videos in the public feed.`
   );
 
-  if (!feedItems.length) {
-    throw new Error('YouTube feed contained no videos.');
-  }
 
-  let existing = {
-    generatedAt: null,
-    channel: HANDLE,
-    channelId: CHANNEL_ID,
-    itemCount: 0,
-    items: []
-  };
+  /*
+   * STEP 2:
+   * Identify ONLY videos that aren't already known.
+   *
+   * Existing videos do not trigger API calls.
+   */
+  const newFeedItems =
+    feedItems.filter(
+      item =>
+        !existingById.has(
+          item.id
+        )
+    );
 
-  if (fs.existsSync(OUTPUT_FILE)) {
-    try {
-      existing = JSON.parse(
-        fs.readFileSync(OUTPUT_FILE, 'utf8')
+  console.log(
+    `New videos discovered: ${newFeedItems.length}`
+  );
+
+
+  /*
+   * STEP 3:
+   * Only now call YouTube Data API.
+   *
+   * Zero new videos = zero API calls.
+   */
+  const youtubeLocations =
+    await fetchYouTubeLocations(
+      newFeedItems.map(
+        item => item.id
+      )
+    );
+
+
+  /*
+   * STEP 4:
+   * Start with existing content.
+   *
+   * This means videos outside the Atom feed are preserved.
+   */
+  const items =
+    existing.items.map(
+      item => ({
+        ...item
+      })
+    );
+
+
+  let geocodesUsed = 0;
+
+
+  /*
+   * STEP 5:
+   * Process ONLY new videos.
+   */
+  for (
+    const feedItem
+    of newFeedItems
+  ) {
+    const item = {
+      id:
+        feedItem.id,
+
+      title:
+        feedItem.title,
+
+      description:
+        feedItem.description,
+
+      url:
+        feedItem.url,
+
+      thumbnail:
+        feedItem.thumbnail ||
+        `https://i.ytimg.com/vi/${feedItem.id}/hqdefault.jpg`,
+
+      publishedAt:
+        feedItem.publishedAt,
+
+      updatedAt:
+        feedItem.updatedAt,
+
+      isShort:
+        detectShort(
+          feedItem,
+          null
+        ),
+
+      category:
+        detectCategory(
+          feedItem.title,
+          feedItem.description
+        ),
+
+      location:
+        '',
+
+      latitude:
+        null,
+
+      longitude:
+        null,
+
+      locationPrecision:
+        null,
+
+      locationSource:
+        null
+    };
+
+
+    /* ------------------------------------------------------------
+       Priority 1: YouTube place tag
+       ------------------------------------------------------------ */
+
+    const youtubeLocation =
+      youtubeLocations.get(
+        feedItem.id
       );
-    } catch (error) {
-      console.warn(
-        'Could not parse existing content.json. Starting fresh.'
+
+    if (
+      youtubeLocation
+    ) {
+      Object.assign(
+        item,
+        youtubeLocation
       );
     }
-  }
 
-  const existingById = new Map(
-    (existing.items || []).map(item => [item.id, item])
-  );
 
-  const videoIds = feedItems.map(item => item.id);
+    /* ------------------------------------------------------------
+       Priority 2: text-based location detection
+       ------------------------------------------------------------ */
 
-  console.log(
-    `Checking YouTube location metadata for ${videoIds.length} videos...`
-  );
+    else {
+      const detected =
+        detectLocation(
+          feedItem.title,
+          feedItem.description
+        );
 
-  const youtubeLocations =
-    await fetchYouTubeLocations(videoIds);
+      if (
+        detected
+      ) {
+        item.location =
+          detected;
+      }
+    }
 
-  console.log(
-    `YouTube locations found: ${youtubeLocations.size}`
-  );
 
-  for (const [videoId, location] of youtubeLocations) {
-    console.log(
-      `  ${videoId}: ${location.location || 'YouTube location'} ` +
-      `(${location.latitude}, ${location.longitude})`
+    /* ------------------------------------------------------------
+       Priority 3: geocoding fallback
+       ------------------------------------------------------------ */
+
+    if (
+      item.location &&
+      typeof item.latitude !== 'number' &&
+      geocodesUsed <
+        MAX_GEOCODES_PER_RUN
+    ) {
+      const result =
+        await geocodeLocation(
+          item.location
+        );
+
+      geocodesUsed++;
+
+      if (
+        result
+      ) {
+        Object.assign(
+          item,
+          result
+        );
+
+        console.log(
+          `Geocoded: ${item.location} → ${result.latitude}, ${result.longitude}`
+        );
+      } else {
+        console.log(
+          `Could not geocode: ${item.location}`
+        );
+      }
+
+      /*
+       * Respect Nominatim's rate limit.
+       */
+      if (
+        geocodesUsed <
+        MAX_GEOCODES_PER_RUN
+      ) {
+        await sleep(
+          GEOCODE_DELAY_MS
+        );
+      }
+    }
+
+
+    items.push(
+      item
     );
   }
 
-  const mergedById = new Map();
 
-  for (const feedItem of feedItems) {
-    const oldItem =
-      existingById.get(feedItem.id) || {};
+  /*
+   * STEP 6:
+   * Sort newest first.
+   */
+  items.sort(
+    (a, b) =>
+      new Date(
+        b.publishedAt || 0
+      ) -
+      new Date(
+        a.publishedAt || 0
+      )
+  );
 
-    const merged =
-      mergeItem(
-        oldItem,
-        {
-          ...feedItem,
-          isShort: oldItem.isShort ?? detectShort(feedItem),
-          category:
-            oldItem.category ||
-            detectCategory(feedItem)
-        },
-        youtubeLocations
-      );
 
-    mergedById.set(feedItem.id, merged);
-  }
+  /*
+   * STEP 7:
+   * Calculate statistics.
+   */
+  const mapped =
+    items.filter(
+      item =>
+        typeof item.latitude === 'number' &&
+        typeof item.longitude === 'number'
+    );
 
-  // Preserve older videos that aren't currently present in the
-  // limited public Atom feed.
-  for (const oldItem of existing.items || []) {
-    if (!mergedById.has(oldItem.id)) {
-      mergedById.set(oldItem.id, oldItem);
-    }
-  }
+  const youtubeMapped =
+    items.filter(
+      item =>
+        item.locationSource ===
+        'youtube'
+    );
 
-  let items = Array.from(mergedById.values());
+  console.log('');
+  console.log(
+    'Foodican update complete.'
+  );
+  console.log('');
 
-  // Newest first.
-  items.sort((a, b) => {
-    const aDate = new Date(a.published || 0).getTime();
-    const bDate = new Date(b.published || 0).getTime();
+  console.log(
+    `Total videos: ${items.length}`
+  );
 
-    return bDate - aDate;
-  });
+  console.log(
+    `New videos processed: ${newFeedItems.length}`
+  );
 
-  items = await geocodeMissingLocations(items);
+  console.log(
+    `Mapped videos: ${mapped.length}`
+  );
 
-  const output = {
-    generatedAt: new Date().toISOString(),
-    channel: HANDLE,
-    channelId: CHANNEL_ID,
-    itemCount: items.length,
+  console.log(
+    `YouTube-mapped videos: ${youtubeMapped.length}`
+  );
+
+  console.log(
+    `Unmapped videos: ${items.length - mapped.length}`
+  );
+
+  console.log('');
+
+
+  /*
+   * IMPORTANT:
+   *
+   * If nothing actually changed, preserve the previous
+   * generatedAt value.
+   */
+  const candidate = {
+    generatedAt:
+      existing.generatedAt ||
+      new Date().toISOString(),
+
+    channelId:
+      CHANNEL_ID,
+
+    channelHandle:
+      HANDLE,
+
     items
   };
 
+  const existingComparable =
+    normalizeForComparison(
+      existing
+    );
+
+  const candidateComparable =
+    normalizeForComparison(
+      candidate
+    );
+
+  if (
+    existingComparable ===
+    candidateComparable
+  ) {
+    console.log(
+      'No actual content changes detected.'
+    );
+
+    return existing;
+  }
+
+  /*
+   * Actual content changed.
+   */
+  candidate.generatedAt =
+    new Date().toISOString();
+
+  console.log(
+    'Actual content changes detected.'
+  );
+
+  return candidate;
+}
+
+
+/* ================================================================
+   WRITE FILE
+   ================================================================ */
+
+async function main() {
+  const data =
+    await buildContent();
+
   fs.mkdirSync(
-    path.dirname(OUTPUT_FILE),
-    { recursive: true }
+    path.dirname(
+      OUTPUT_FILE
+    ),
+    {
+      recursive: true
+    }
   );
 
   fs.writeFileSync(
     OUTPUT_FILE,
-    JSON.stringify(output, null, 2) + '\n',
-    'utf8'
+    JSON.stringify(
+      data,
+      null,
+      2
+    ) + '\n'
   );
 
-  const mapped = items.filter(
-    item =>
-      Number.isFinite(item.latitude) &&
-      Number.isFinite(item.longitude)
-  );
-
-  const youtubeMapped = items.filter(
-    item => item.locationSource === 'youtube'
-  );
-
-  console.log('');
-  console.log('Foodican update complete.');
-  console.log(`Total videos: ${items.length}`);
-  console.log(`Mapped videos: ${mapped.length}`);
-  console.log(`YouTube-mapped videos: ${youtubeMapped.length}`);
   console.log(
-    `Unmapped videos: ${items.length - mapped.length}`
+    `Output: ${OUTPUT_FILE}`
   );
-  console.log(`Output: ${OUTPUT_FILE}`);
 }
+
 
 main().catch(error => {
   console.error('');
-  console.error('Foodican update failed:');
-  console.error(error);
+  console.error(
+    'Foodican content update failed:'
+  );
+  console.error(
+    error.message
+  );
+  console.error('');
+
   process.exit(1);
 });
