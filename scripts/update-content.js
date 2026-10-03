@@ -119,115 +119,860 @@ function detectShort(item, existing) {
 }
 
 
-/* ================================================================
-   CATEGORY DETECTION
-   ================================================================ */
+// ============================================================
+// FOODICAN VIDEO CATEGORIZATION
+// ============================================================
 
-function detectCategory(title, description) {
-  const text =
-    `${title} ${description}`.toLowerCase();
+const CATEGORY_KEYWORDS = {
+  food: {
+    // Strong food / restaurant signals
+    strong: [
+      "restaurant",
+      "restaurants",
+      "buffet",
+      "all you can eat",
+      "ayce",
+      "food review",
+      "restaurant review",
+      "food tasting",
+      "taste test",
+      "food hall",
+      "food court",
+      "food truck",
+      "steakhouse",
+      "bakery",
+      "cafe",
+      "café",
+      "coffee shop",
+      "tea shop",
+      "boba",
+      "brunch",
+      "dinner",
+      "lunch",
+      "breakfast",
+      "chef",
+      "menu",
+      "dish",
+      "meal",
+      "cuisine",
+      "recipe",
+      "cooking"
+    ],
 
-  /*
-   * Food gets priority over generic lifestyle words.
-   */
-  const foodKeywords = [
-    'restaurant',
-    'food',
-    'eat',
-    'eating',
-    'menu',
-    'dish',
-    'pizza',
-    'burger',
-    'sushi',
-    'ramen',
-    'noodle',
-    'seafood',
-    'steak',
-    'bbq',
-    'barbecue',
-    'chicken',
-    'pasta',
-    'taco',
-    'tacos',
-    'pho',
-    'buffet',
-    'bakery',
-    'cafe',
-    'café',
-    'coffee',
-    'dessert',
-    'ice cream',
-    'boba',
-    'brunch',
-    'lunch',
-    'dinner',
-    'breakfast',
-    'chef',
-    'kitchen',
-    'grill',
-    'olive garden',
-    'kim son',
-    'kim sơn'
-  ];
+    // Cuisines
+    cuisine: [
+      "vietnamese",
+      "chinese",
+      "korean",
+      "japanese",
+      "thai",
+      "indian",
+      "mexican",
+      "italian",
+      "french",
+      "taiwanese",
+      "filipino",
+      "indonesian",
+      "malaysian",
+      "cambodian",
+      "laotian",
+      "hawaiian",
+      "persian",
+      "mediterranean",
+      "greek",
+      "turkish",
+      "ethiopian",
+      "caribbean",
+      "soul food",
+      "southern",
+      "tex mex",
+      "tex-mex",
+      "cajun",
+      "creole"
+    ],
 
-  const techKeywords = [
-    'tech',
-    'technology',
-    'iphone',
-    'android',
-    'apple',
-    'samsung',
-    'computer',
-    'laptop',
-    'phone',
-    'software',
-    ' ai ',
-    'gadget',
-    'device',
-    'keyboard',
-    'monitor',
-    'camera'
-  ];
+    // Dishes / ingredients
+    dishes: [
+      "pho",
+      "ramen",
+      "sushi",
+      "sashimi",
+      "dim sum",
+      "dumplings",
+      "noodles",
+      "fried rice",
+      "rice",
+      "banh mi",
+      "bánh mì",
+      "spring rolls",
+      "egg rolls",
+      "wings",
+      "chicken",
+      "burger",
+      "burgers",
+      "cheeseburger",
+      "pizza",
+      "pasta",
+      "taco",
+      "tacos",
+      "burrito",
+      "burritos",
+      "quesadilla",
+      "quesadillas",
+      "nachos",
+      "steak",
+      "brisket",
+      "ribs",
+      "seafood",
+      "shrimp",
+      "crab",
+      "lobster",
+      "oyster",
+      "oysters",
+      "fish",
+      "salmon",
+      "soup",
+      "sandwich",
+      "sandwiches",
+      "dessert",
+      "desserts",
+      "cake",
+      "ice cream",
+      "donut",
+      "donuts",
+      "doughnut",
+      "doughnuts",
+      "pastry",
+      "pastries",
+      "chocolate",
+      "bubble tea"
+    ],
 
-  const travelKeywords = [
-    'travel',
-    'trip',
-    'hotel',
-    'vacation',
-    'airport',
-    'flight',
-    'resort',
-    'tour',
-    'visit',
-    'destination'
-  ];
+    // General food terminology
+    general: [
+      "food",
+      "foodie",
+      "eats",
+      "eat",
+      "eating",
+      "dining",
+      "delicious",
+      "yummy",
+      "tasty",
+      "meal",
+      "meals",
+      "taste",
+      "tasting"
+    ],
 
-  if (
-    foodKeywords.some(keyword =>
-      text.includes(keyword)
-    )
-  ) {
-    return 'food';
+    hashtags: [
+      "#food",
+      "#foodie",
+      "#foodreview",
+      "#restaurant",
+      "#restaurants",
+      "#eats",
+      "#eat",
+      "#dining",
+      "#buffet",
+      "#foodlover",
+      "#foodlovers",
+      "#foodblogger",
+      "#foodblog",
+      "#yummy",
+      "#delicious"
+    ]
+  },
+
+  tech: {
+    // Strong consumer-tech signals
+    strong: [
+      "smart home",
+      "home automation",
+      "smart lighting",
+      "smart lights",
+      "smart lock",
+      "smart locks",
+      "smart thermostat",
+      "smart thermostats",
+      "smart doorbell",
+      "smart doorbells",
+      "home security",
+      "security camera",
+      "security cameras",
+      "doorbell camera",
+      "doorbell cameras",
+      "camera gear",
+      "action camera",
+      "action cameras",
+      "mirrorless camera",
+      "mirrorless cameras",
+      "dslr",
+      "webcam",
+      "webcams",
+      "smartphone",
+      "smartphones",
+      "phone review",
+      "tech review",
+      "product review",
+      "gadget",
+      "gadgets",
+      "electronics"
+    ],
+
+    // General technology
+    general: [
+      "technology",
+      "technology review",
+      "tech",
+      "device",
+      "devices",
+      "gear",
+      "consumer electronics",
+      "consumer tech",
+      "computer",
+      "computers",
+      "laptop",
+      "laptops",
+      "desktop",
+      "desktop pc",
+      "pc",
+      "tablet",
+      "tablets",
+      "software",
+      "app",
+      "apps",
+      "artificial intelligence",
+      "ai",
+      "automation",
+      "robot",
+      "robotics"
+    ],
+
+    // Cameras / photography / video
+    cameras: [
+      "camera",
+      "cameras",
+      "digital camera",
+      "photography",
+      "photography gear",
+      "videography",
+      "video gear",
+      "drone",
+      "drones",
+      "gimbal",
+      "microphone",
+      "microphones",
+      "lighting",
+      "camera lens",
+      "camera lenses"
+    ],
+
+    // Phones / mobile
+    phones: [
+      "phone",
+      "phones",
+      "mobile",
+      "mobile phone",
+      "iphone",
+      "android",
+      "google pixel",
+      "pixel",
+      "galaxy",
+      "samsung",
+      "oneplus"
+    ],
+
+    // Computers
+    computers: [
+      "macbook",
+      "ipad",
+      "computer",
+      "laptop",
+      "desktop",
+      "pc",
+      "monitor",
+      "monitors",
+      "keyboard",
+      "keyboards",
+      "mouse",
+      "mechanical keyboard"
+    ],
+
+    // Accessories / gear
+    gear: [
+      "headphones",
+      "headphone",
+      "earbuds",
+      "earbud",
+      "smartwatch",
+      "smartwatches",
+      "fitness tracker",
+      "fitness trackers",
+      "wearable",
+      "wearables",
+      "charger",
+      "chargers",
+      "power bank",
+      "power banks",
+      "usb",
+      "dock",
+      "docking station",
+      "accessory",
+      "accessories"
+    ],
+
+    // AI
+    ai: [
+      "ai",
+      "artificial intelligence",
+      "chatgpt",
+      "generative ai",
+      "machine learning",
+      "ai tools",
+      "ai tool"
+    ],
+
+    hashtags: [
+      "#tech",
+      "#technology",
+      "#gadgets",
+      "#gear",
+      "#smarthome",
+      "#smart home",
+      "#camera",
+      "#cameras",
+      "#photography",
+      "#videography",
+      "#iphone",
+      "#android",
+      "#techreview",
+      "#productreview",
+      "#electronics"
+    ]
+  },
+
+  travel: {
+    strong: [
+      "hotel",
+      "hotels",
+      "resort",
+      "resorts",
+      "airport",
+      "airline",
+      "flight",
+      "flights",
+      "vacation",
+      "road trip",
+      "cruise",
+      "cruising",
+      "airbnb",
+      "travel guide",
+      "travel vlog",
+      "traveling",
+      "travelling",
+      "travel",
+      "trip",
+      "trips"
+    ],
+
+    general: [
+      "destination",
+      "destinations",
+      "tour",
+      "touring",
+      "visiting",
+      "exploring",
+      "explore",
+      "getaway",
+      "weekend getaway",
+      "roadtrip"
+    ],
+
+    hashtags: [
+      "#travel",
+      "#traveling",
+      "#travelling",
+      "#travelvlog",
+      "#vacation",
+      "#roadtrip",
+      "#travelguide",
+      "#traveling"
+    ]
+  },
+
+  life: {
+    // Events
+    events: [
+      "event",
+      "events",
+      "festival",
+      "festivals",
+      "fair",
+      "fairs",
+      "expo",
+      "exhibition",
+      "concert",
+      "concerts",
+      "show",
+      "shows",
+      "party",
+      "parties",
+      "birthday party",
+      "celebration",
+      "celebrations",
+      "community event",
+      "local event",
+      "special event",
+      "pop up",
+      "popup",
+      "grand opening",
+      "opening day",
+      "conference",
+      "convention",
+      "meetup",
+      "meet up"
+    ],
+
+    // Things to do / experiences
+    experiences: [
+      "things to do",
+      "things to do in",
+      "fun things to do",
+      "activity",
+      "activities",
+      "experience",
+      "experiences",
+      "what to do",
+      "weekend activity",
+      "weekend activities",
+      "family activity",
+      "family activities",
+      "indoor activity",
+      "outdoor activity",
+      "attraction",
+      "attractions"
+    ],
+
+    // Life hacks / useful information
+    hacks: [
+      "life hack",
+      "life hacks",
+      "lifehack",
+      "lifehacks",
+      "hack",
+      "hacks",
+      "tip",
+      "tips",
+      "trick",
+      "tricks",
+      "tips and tricks",
+      "how to",
+      "how-to",
+      "guide",
+      "easy way",
+      "easiest way",
+      "best way",
+      "save time",
+      "save money",
+      "money saving",
+      "time saving",
+      "organization",
+      "organizing",
+      "productivity",
+      "shortcut",
+      "shortcuts",
+      "smart trick",
+      "useful tips",
+      "helpful tips",
+      "things you need to know",
+      "things you should know",
+      "did you know"
+    ],
+
+    // Discoveries / recommendations
+    discoveries: [
+      "hidden gem",
+      "hidden gems",
+      "local gem",
+      "local gems",
+      "must try",
+      "must see",
+      "worth it",
+      "worth checking out",
+      "check this out",
+      "you need to know",
+      "you need to see",
+      "you need to try"
+    ],
+
+    hashtags: [
+      "#lifehack",
+      "#lifehacks",
+      "#hack",
+      "#hacks",
+      "#tips",
+      "#tipsandtricks",
+      "#howto",
+      "#events",
+      "#event",
+      "#festival",
+      "#thingstodo",
+      "#activities",
+      "#experience",
+      "#weekend",
+      "#weekendactivities"
+    ]
+  }
+};
+
+
+// ============================================================
+// CATEGORY HELPERS
+// ============================================================
+
+function normalizeText(value = "") {
+  return String(value)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’']/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function containsKeyword(text, keyword) {
+  const normalizedKeyword = normalizeText(keyword);
+
+  if (!normalizedKeyword) return false;
+
+  // For phrases, simple includes() works well.
+  if (normalizedKeyword.includes(" ")) {
+    return text.includes(normalizedKeyword);
   }
 
+  // For individual words, use word boundaries so things like
+  // "tech" don't accidentally match unrelated words.
+  const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i").test(text);
+}
+
+function countMatches(text, keywords) {
+  return keywords.reduce((count, keyword) => {
+    return count + (containsKeyword(text, keyword) ? 1 : 0);
+  }, 0);
+}
+
+
+// ============================================================
+// CATEGORY ENGINE
+// ============================================================
+
+function categorizeVideo(video) {
+  const title = normalizeText(video.title || "");
+  const description = normalizeText(video.description || "");
+
+  // YouTube can return tags as an array.
+  const tags = Array.isArray(video.tags)
+    ? video.tags.map(normalizeText).join(" ")
+    : normalizeText(video.tags || "");
+
+  const hashtags = [
+    ...(title.match(/#[a-z0-9_-]+/gi) || []),
+    ...(description.match(/#[a-z0-9_-]+/gi) || [])
+  ]
+    .map(normalizeText)
+    .join(" ");
+
+  // Title gets the most influence.
+  const titleText = title;
+
+  // Description + tags provide supporting evidence.
+  const bodyText = `${description} ${tags}`;
+
+  const scores = {
+    food: 0,
+    tech: 0,
+    travel: 0,
+    life: 0
+  };
+
+  // ----------------------------------------------------------
+  // FOOD
+  // ----------------------------------------------------------
+
+  scores.food += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.food.strong
+  ) * 8;
+
+  scores.food += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.food.cuisine
+  ) * 7;
+
+  scores.food += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.food.dishes
+  ) * 6;
+
+  scores.food += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.food.general
+  ) * 4;
+
+  scores.food += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.food.strong
+  ) * 4;
+
+  scores.food += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.food.cuisine
+  ) * 5;
+
+  scores.food += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.food.dishes
+  ) * 3;
+
+  scores.food += countMatches(
+    hashtags,
+    CATEGORY_KEYWORDS.food.hashtags
+  ) * 5;
+
+
+  // ----------------------------------------------------------
+  // TECH
+  // ----------------------------------------------------------
+
+  scores.tech += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.tech.strong
+  ) * 8;
+
+  scores.tech += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.tech.cameras
+  ) * 7;
+
+  scores.tech += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.tech.phones
+  ) * 7;
+
+  scores.tech += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.tech.gear
+  ) * 6;
+
+  scores.tech += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.tech.ai
+  ) * 7;
+
+  scores.tech += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.tech.general
+  ) * 4;
+
+  scores.tech += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.tech.strong
+  ) * 4;
+
+  scores.tech += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.tech.cameras
+  ) * 4;
+
+  scores.tech += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.tech.phones
+  ) * 4;
+
+  scores.tech += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.tech.gear
+  ) * 3;
+
+  scores.tech += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.tech.ai
+  ) * 4;
+
+  scores.tech += countMatches(
+    hashtags,
+    CATEGORY_KEYWORDS.tech.hashtags
+  ) * 5;
+
+
+  // ----------------------------------------------------------
+  // TRAVEL
+  // ----------------------------------------------------------
+
+  scores.travel += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.travel.strong
+  ) * 8;
+
+  scores.travel += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.travel.general
+  ) * 4;
+
+  scores.travel += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.travel.strong
+  ) * 4;
+
+  scores.travel += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.travel.general
+  ) * 2;
+
+  scores.travel += countMatches(
+    hashtags,
+    CATEGORY_KEYWORDS.travel.hashtags
+  ) * 5;
+
+
+  // ----------------------------------------------------------
+  // LIFE
+  // ----------------------------------------------------------
+
+  scores.life += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.life.events
+  ) * 8;
+
+  scores.life += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.life.experiences
+  ) * 8;
+
+  scores.life += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.life.hacks
+  ) * 8;
+
+  scores.life += countMatches(
+    titleText,
+    CATEGORY_KEYWORDS.life.discoveries
+  ) * 6;
+
+  scores.life += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.life.events
+  ) * 4;
+
+  scores.life += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.life.experiences
+  ) * 4;
+
+  scores.life += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.life.hacks
+  ) * 4;
+
+  scores.life += countMatches(
+    bodyText,
+    CATEGORY_KEYWORDS.life.discoveries
+  ) * 3;
+
+  scores.life += countMatches(
+    hashtags,
+    CATEGORY_KEYWORDS.life.hashtags
+  ) * 5;
+
+
+  // ----------------------------------------------------------
+  // IMPORTANT CONTEXT RULES
+  // ----------------------------------------------------------
+
+  // A city name by itself should NOT make something Travel.
+  // We intentionally don't include cities in the keyword lists.
+
+  // Restaurant/food-specific content gets a strong boost.
   if (
-    techKeywords.some(keyword =>
-      text.includes(keyword)
-    )
+    /restaurant|buffet|steakhouse|food hall|food truck|cafe|café/.test(title)
   ) {
-    return 'tech';
+    scores.food += 10;
   }
 
+  // Cuisine + restaurant/food context is an especially strong
+  // indicator that the video belongs in Food.
   if (
-    travelKeywords.some(keyword =>
-      text.includes(keyword)
-    )
+    /vietnamese|chinese|korean|japanese|thai|indian|mexican|italian|taiwanese|filipino/.test(title) &&
+    /restaurant|buffet|food|dining|eat|eats|cuisine|meal/.test(title)
   ) {
-    return 'travel';
+    scores.food += 12;
   }
 
-  return 'life';
+  // Smart-home content is specifically Tech.
+  if (
+    /smart home|smart lock|smart thermostat|smart lighting|smart doorbell|security camera|home automation/.test(title)
+  ) {
+    scores.tech += 12;
+  }
+
+  // Camera/video gear is specifically Tech.
+  if (
+    /camera|cameras|camera gear|photography|videography|gimbal|webcam|microphone/.test(title)
+  ) {
+    scores.tech += 10;
+  }
+
+  // Phone content is specifically Tech.
+  if (
+    /iphone|android|smartphone|phone review|pixel|galaxy/.test(title)
+  ) {
+    scores.tech += 10;
+  }
+
+
+  // ----------------------------------------------------------
+  // CHOOSE CATEGORY
+  // ----------------------------------------------------------
+
+  const sorted = Object.entries(scores)
+    .sort((a, b) => b[1] - a[1]);
+
+  const [winner, winningScore] = sorted[0];
+  const [, secondScore] = sorted[1];
+
+  // If absolutely nothing meaningful matched, default to Life.
+  // This avoids pretending we know the category when we don't.
+  if (winningScore === 0) {
+    return "life";
+  }
+
+  // If the winner has a meaningful lead, use it.
+  if (winningScore >= secondScore + 3) {
+    return winner;
+  }
+
+  // For close calls, favor highly specific categories based
+  // on the strongest evidence rather than a generic fallback.
+
+  if (scores.food >= 8) {
+    return "food";
+  }
+
+  if (scores.tech >= 8) {
+    return "tech";
+  }
+
+  if (scores.travel >= 8) {
+    return "travel";
+  }
+
+  if (scores.life >= 8) {
+    return "life";
+  }
+
+  return winner;
 }
 
 
