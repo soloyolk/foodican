@@ -273,6 +273,58 @@ a{
 
 
 /* =========================================================
+   SECTION JUMP NAVIGATION
+========================================================= */
+
+.section-jump{
+  background:var(--cream);
+  border-bottom:1px solid var(--line);
+  padding:12px 0
+}
+
+.section-jump-inner{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap
+}
+
+.section-jump-label{
+  color:var(--muted);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  margin-right:4px
+}
+
+.section-jump a{
+  padding:6px 11px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:white;
+  color:var(--navy);
+  font-size:12px;
+  font-weight:800;
+  transition:.2s transform,.2s background,.2s border-color
+}
+
+.section-jump a:hover{
+  transform:translateY(-1px);
+  background:var(--warm);
+  border-color:var(--gold)
+}
+
+#latest,
+#food,
+#tech,
+#life{
+  scroll-margin-top:110px
+}
+
+
+/* =========================================================
    GENERAL SECTIONS
 ========================================================= */
 
@@ -900,6 +952,21 @@ a{
 
   .brand img{
     width:125px
+  }
+
+  .section-jump{
+    padding:10px 0
+  }
+
+  .section-jump-inner{
+    justify-content:flex-start;
+    gap:6px
+  }
+
+  .section-jump-label{
+    width:100%;
+    margin-right:0;
+    margin-bottom:1px
   }
 
   /* Map */
