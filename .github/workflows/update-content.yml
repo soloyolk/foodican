@@ -21,7 +21,7 @@ jobs:
   update:
     runs-on: ubuntu-latest
 
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     environment:
       name: github-pages
@@ -50,104 +50,11 @@ jobs:
 
 
       # ============================================================
-      # VERIFY FREE YOUTUBE FEED
-      # ============================================================
-
-      - name: Verify YouTube feed
-        env:
-          YOUTUBE_CHANNEL_ID: 'UCE6VXOmQeNKBqVspyX5qoWA'
-        run: |
-          node - <<'NODE'
-          const https = require('https');
-
-          const channelId =
-            process.env.YOUTUBE_CHANNEL_ID;
-
-          const url =
-            `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`;
-
-          console.log(
-            `Testing YouTube feed: ${url}`
-          );
-
-          https.get(
-            url,
-            {
-              headers: {
-                'User-Agent':
-                  'Foodican GitHub Action/1.0'
-              }
-            },
-            response => {
-              let body = '';
-
-              response.on(
-                'data',
-                chunk => {
-                  body += chunk;
-                }
-              );
-
-              response.on(
-                'end',
-                () => {
-                  console.log(
-                    `HTTP status: ${response.statusCode}`
-                  );
-
-                  console.log(
-                    `Response length: ${body.length}`
-                  );
-
-                  if (
-                    response.statusCode !== 200
-                  ) {
-                    console.error(
-                      'YouTube feed request failed.'
-                    );
-
-                    process.exit(1);
-                  }
-
-                  if (
-                    !body.includes('<entry>')
-                  ) {
-                    console.error(
-                      'YouTube feed did not contain any entries.'
-                    );
-
-                    process.exit(1);
-                  }
-
-                  const matches =
-                    body.match(
-                      /<yt:videoId>/g
-                    ) || [];
-
-                  console.log(
-                    `Videos detected: ${matches.length}`
-                  );
-                }
-              );
-            }
-          ).on(
-            'error',
-            error => {
-              console.error(
-                `YouTube feed error: ${error.message}`
-              );
-
-              process.exit(1);
-            }
-          );
-          NODE
-
-
-      # ============================================================
       # UPDATE CONTENT
       #
-      # The script itself determines whether the YouTube API
-      # is necessary.
+      # update-content.js tries the free YouTube feed first,
+      # retries transient failures, then falls back to the
+      # YouTube Data API when necessary.
       # ============================================================
 
       - name: Update Foodican content
@@ -156,6 +63,11 @@ jobs:
           YOUTUBE_HANDLE: '@thefoodican'
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           MAX_ITEMS: '100'
+
+          # One-time full-history import. The script creates
+          # data/.youtube-history-imported after a successful
+          # import, so future runs automatically skip the scan.
+          YOUTUBE_FULL_HISTORY: 'true'
         run: |
           node scripts/update-content.js
 
@@ -392,7 +304,10 @@ jobs:
       - name: Check for content changes
         id: changes
         run: |
-          if git diff --quiet -- data/content.json; then
+          if \
+            git diff --quiet -- data/content.json && \
+            git diff --quiet -- data/.youtube-history-imported && \
+            git ls-files --error-unmatch data/.youtube-history-imported >/dev/null 2>&1; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
 
             echo ''
@@ -405,7 +320,7 @@ jobs:
             echo 'Content changes detected.'
             echo ''
 
-            git diff --stat -- data/content.json
+            git diff --stat -- data/content.json data/.youtube-history-imported
           fi
 
 
@@ -423,7 +338,8 @@ jobs:
             '41898282+github-actions[bot]@users.noreply.github.com'
 
           git add \
-            data/content.json
+            data/content.json \
+            data/.youtube-history-imported
 
           git commit \
             -m "chore: update Foodican content"
