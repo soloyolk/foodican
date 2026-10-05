@@ -2,8 +2,8 @@ name: Update Foodican Content
 
 on:
   schedule:
-    # Run every 6 hours.
-    - cron: '17 */6 * * *'
+    # Run every 4 hours.
+    - cron: '17 */4 * * *'
 
   # Allow manual runs from GitHub Actions.
   workflow_dispatch:
@@ -34,7 +34,7 @@ jobs:
       # ============================================================
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
@@ -44,9 +44,9 @@ jobs:
       # ============================================================
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
 
 
       # ============================================================
