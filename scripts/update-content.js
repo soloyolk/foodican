@@ -15,6 +15,16 @@ const API_KEY =
 const MAX_ITEMS =
   Number(process.env.MAX_ITEMS || 100);
 
+const FULL_HISTORY_IMPORT =
+  String(process.env.YOUTUBE_FULL_HISTORY || 'false').toLowerCase() === 'true';
+
+const HISTORY_MARKER_FILE =
+  path.join(
+    process.cwd(),
+    'data',
+    '.youtube-history-imported'
+  );
+
 const OUTPUT_FILE =
   path.join(
     process.cwd(),
@@ -27,6 +37,15 @@ const FEED_URL =
 
 const YOUTUBE_API_URL =
   'https://www.googleapis.com/youtube/v3/videos';
+
+const YOUTUBE_PLAYLIST_ITEMS_URL =
+  'https://www.googleapis.com/youtube/v3/playlistItems';
+
+const YOUTUBE_CHANNELS_URL =
+  'https://www.googleapis.com/youtube/v3/channels';
+
+const FEED_RETRIES = 3;
+const FEED_RETRY_DELAY_MS = 2500;
 
 const NOMINATIM_URL =
   'https://nominatim.openstreetmap.org/search';
@@ -1103,24 +1122,58 @@ async function fetchFeed() {
     `Fetching YouTube feed for ${HANDLE}...`
   );
 
-  const response =
-    await fetch(
-      FEED_URL,
-      {
-        headers: {
-          'User-Agent':
-            'Foodican GitHub Action/1.0'
-        }
-      }
-    );
+  let lastError = null;
 
-  if (!response.ok) {
-    throw new Error(
-      `YouTube feed returned HTTP ${response.status}`
-    );
+  for (let attempt = 1; attempt <= FEED_RETRIES; attempt++) {
+    try {
+      const response =
+        await fetch(
+          FEED_URL,
+          {
+            headers: {
+              'User-Agent':
+                'Foodican GitHub Action/1.0'
+            }
+          }
+        );
+
+      if (!response.ok) {
+        throw new Error(
+          `YouTube feed returned HTTP ${response.status}`
+        );
+      }
+
+      const xml = await response.text();
+
+      if (!xml.includes('<entry>')) {
+        throw new Error(
+          'YouTube feed contained no entries'
+        );
+      }
+
+      console.log(
+        `YouTube feed succeeded on attempt ${attempt}.`
+      );
+
+      return xml;
+    } catch (error) {
+      lastError = error;
+
+      console.warn(
+        `YouTube feed attempt ${attempt}/${FEED_RETRIES} failed: ${error.message}`
+      );
+
+      if (attempt < FEED_RETRIES) {
+        await sleep(FEED_RETRY_DELAY_MS);
+      }
+    }
   }
 
-  return response.text();
+  console.warn(
+    'YouTube public feed is temporarily unavailable. Falling back to the YouTube Data API.'
+  );
+
+  return null;
 }
 
 
@@ -1246,12 +1299,216 @@ function loadExistingContent() {
    YOUTUBE DATA API
    ================================================================ */
 
+async function youtubeApiRequest(endpoint, params) {
+  if (!API_KEY) {
+    throw new Error(
+      'YOUTUBE_API_KEY is not configured.'
+    );
+  }
+
+  const url = new URL(endpoint);
+
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value);
+  }
+
+  url.searchParams.set('key', API_KEY);
+
+  const response = await fetch(url);
+  const body = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `YouTube Data API returned HTTP ${response.status}: ${body}`
+    );
+  }
+
+  return JSON.parse(body);
+}
+
+
+async function getUploadsPlaylistId() {
+  const data = await youtubeApiRequest(
+    YOUTUBE_CHANNELS_URL,
+    {
+      part: 'contentDetails',
+      id: CHANNEL_ID
+    }
+  );
+
+  const channel = data.items?.[0];
+
+  if (!channel) {
+    throw new Error(
+      `YouTube channel ${CHANNEL_ID} could not be found through the Data API.`
+    );
+  }
+
+  const uploadsPlaylistId =
+    channel.contentDetails?.relatedPlaylists?.uploads;
+
+  if (!uploadsPlaylistId) {
+    throw new Error(
+      'YouTube channel does not expose an uploads playlist.'
+    );
+  }
+
+  return uploadsPlaylistId;
+}
+
+
+async function fetchUploadVideoIds({ all = false } = {}) {
+  const uploadsPlaylistId = await getUploadsPlaylistId();
+
+  const ids = [];
+  let pageToken = '';
+  const maxVideos = all ? Number.MAX_SAFE_INTEGER : MAX_ITEMS;
+
+  console.log(
+    all
+      ? 'Scanning the full YouTube uploads history...'
+      : `Scanning up to ${MAX_ITEMS} recent YouTube uploads through the API...`
+  );
+
+  do {
+    const params = {
+      part: 'contentDetails',
+      playlistId: uploadsPlaylistId,
+      maxResults: '50'
+    };
+
+    if (pageToken) {
+      params.pageToken = pageToken;
+    }
+
+    const data = await youtubeApiRequest(
+      YOUTUBE_PLAYLIST_ITEMS_URL,
+      params
+    );
+
+    for (const item of data.items || []) {
+      const id = item.contentDetails?.videoId;
+
+      if (id && !ids.includes(id)) {
+        ids.push(id);
+      }
+
+      if (ids.length >= maxVideos) {
+        break;
+      }
+    }
+
+    if (ids.length >= maxVideos) {
+      break;
+    }
+
+    pageToken = data.nextPageToken || '';
+  } while (pageToken);
+
+  console.log(
+    `YouTube API upload scan found ${ids.length} video ID(s).`
+  );
+
+  return ids;
+}
+
+
+async function fetchYouTubeVideoDetails(videoIds) {
+  const videos = new Map();
+
+  if (!videoIds.length) {
+    return videos;
+  }
+
+  const BATCH_SIZE = 50;
+
+  for (let i = 0; i < videoIds.length; i += BATCH_SIZE) {
+    const batch = videoIds.slice(i, i + BATCH_SIZE);
+
+    const data = await youtubeApiRequest(
+      YOUTUBE_API_URL,
+      {
+        part: 'snippet,recordingDetails',
+        id: batch.join(',')
+      }
+    );
+
+    for (const video of data.items || []) {
+      videos.set(video.id, video);
+    }
+  }
+
+  return videos;
+}
+
+
+function videoApiItemToContentItem(video, existing = null) {
+  const snippet = video.snippet || {};
+  const recording = video.recordingDetails || {};
+  const coordinates = recording.location;
+
+  const item = {
+    id: video.id,
+    title: cleanText(snippet.title),
+    description: cleanText(snippet.description),
+    url: `https://www.youtube.com/watch?v=${video.id}`,
+    thumbnail:
+      snippet.thumbnails?.high?.url ||
+      snippet.thumbnails?.medium?.url ||
+      snippet.thumbnails?.default?.url ||
+      `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
+    publishedAt: snippet.publishedAt || '',
+    updatedAt: existing?.updatedAt || snippet.publishedAt || '',
+    isShort: detectShort(
+      {
+        id: video.id,
+        title: snippet.title,
+        url: `https://www.youtube.com/watch?v=${video.id}`
+      },
+      existing
+    ),
+    category: categorizeVideo({
+      title: snippet.title,
+      description: snippet.description
+    }),
+    location: '',
+    latitude: null,
+    longitude: null,
+    locationPrecision: null,
+    locationSource: null
+  };
+
+  if (
+    coordinates &&
+    Number.isFinite(Number(coordinates.latitude)) &&
+    Number.isFinite(Number(coordinates.longitude))
+  ) {
+    item.location =
+      cleanText(recording.locationDescription) ||
+      cleanText(snippet.title);
+    item.latitude = Number(coordinates.latitude);
+    item.longitude = Number(coordinates.longitude);
+    item.locationPrecision = 'exact';
+    item.locationSource = 'youtube';
+  } else if (existing) {
+    item.location = existing.location || '';
+    item.latitude =
+      typeof existing.latitude === 'number'
+        ? existing.latitude
+        : null;
+    item.longitude =
+      typeof existing.longitude === 'number'
+        ? existing.longitude
+        : null;
+    item.locationPrecision = existing.locationPrecision || null;
+    item.locationSource = existing.locationSource || null;
+  }
+
+  return item;
+}
+
+
 async function fetchYouTubeLocations(videoIds) {
-  /*
-   * CRITICAL OPTIMIZATION:
-   *
-   * This function is NEVER called unless there are new videos.
-   */
   if (!videoIds.length) {
     console.log(
       'No new videos. Skipping YouTube Data API.'
@@ -1270,115 +1527,30 @@ async function fetchYouTubeLocations(videoIds) {
     `Checking YouTube location metadata for ${videoIds.length} new video(s)...`
   );
 
-  const locations =
-    new Map();
+  const videos = await fetchYouTubeVideoDetails(videoIds);
+  const locations = new Map();
 
-  /*
-   * YouTube supports multiple video IDs in a single request.
-   */
-  const BATCH_SIZE = 50;
-
-  for (
-    let i = 0;
-    i < videoIds.length;
-    i += BATCH_SIZE
-  ) {
-    const batch =
-      videoIds.slice(
-        i,
-        i + BATCH_SIZE
-      );
-
-    const url =
-      new URL(
-        YOUTUBE_API_URL
-      );
-
-    url.searchParams.set(
-      'part',
-      'snippet,recordingDetails'
+  for (const [id, video] of videos) {
+    const recording = video.recordingDetails;
+    const coordinates = recording?.location;
+    const description = cleanText(
+      recording?.locationDescription
     );
 
-    url.searchParams.set(
-      'id',
-      batch.join(',')
-    );
-
-    url.searchParams.set(
-      'key',
-      API_KEY
-    );
-
-    const response =
-      await fetch(url);
-
-    if (!response.ok) {
-      const body =
-        await response.text();
-
-      throw new Error(
-        `YouTube Data API returned HTTP ${response.status}: ${body}`
-      );
-    }
-
-    const data =
-      await response.json();
-
-    for (
-      const video
-      of data.items || []
+    if (
+      coordinates &&
+      Number.isFinite(Number(coordinates.latitude)) &&
+      Number.isFinite(Number(coordinates.longitude))
     ) {
-      const recording =
-        video.recordingDetails;
-
-      const coordinates =
-        recording?.location;
-
-      const description =
-        cleanText(
-          recording?.locationDescription
-        );
-
-      if (
-        coordinates &&
-        Number.isFinite(
-          Number(
-            coordinates.latitude
-          )
-        ) &&
-        Number.isFinite(
-          Number(
-            coordinates.longitude
-          )
-        )
-      ) {
-        locations.set(
-          video.id,
-          {
-            location:
-              description ||
-              cleanText(
-                video.snippet?.title
-              ),
-
-            latitude:
-              Number(
-                coordinates.latitude
-              ),
-
-            longitude:
-              Number(
-                coordinates.longitude
-              ),
-
-            locationPrecision:
-              'exact',
-
-            locationSource:
-              'youtube'
-          }
-        );
-      }
+      locations.set(id, {
+        location:
+          description ||
+          cleanText(video.snippet?.title),
+        latitude: Number(coordinates.latitude),
+        longitude: Number(coordinates.longitude),
+        locationPrecision: 'exact',
+        locationSource: 'youtube'
+      });
     }
   }
 
@@ -1386,22 +1558,49 @@ async function fetchYouTubeLocations(videoIds) {
     `YouTube locations found: ${locations.size}`
   );
 
-  for (
-    const [
-      id,
-      location
-    ]
-    of locations
-  ) {
-    console.log(
-      `  ${id}: ${location.location} (${location.latitude}, ${location.longitude})`
-    );
-  }
-
   return locations;
 }
 
 
+function historyImportComplete() {
+  return fs.existsSync(HISTORY_MARKER_FILE);
+}
+
+
+function markHistoryImportComplete() {
+  fs.writeFileSync(
+    HISTORY_MARKER_FILE,
+    `${new Date().toISOString()}\n`
+  );
+}
+
+
+async function fullHistoryImport(existingById) {
+  if (!API_KEY) {
+    throw new Error(
+      'YOUTUBE_API_KEY is required for the full YouTube history import.'
+    );
+  }
+
+  const videoIds = await fetchUploadVideoIds({ all: true });
+  const videos = await fetchYouTubeVideoDetails(videoIds);
+  const imported = [];
+
+  for (const video of videos.values()) {
+    imported.push(
+      videoApiItemToContentItem(
+        video,
+        existingById.get(video.id) || null
+      )
+    );
+  }
+
+  console.log(
+    `Full history import processed ${imported.length} video(s).`
+  );
+
+  return imported;
+}
 /* ================================================================
    GEOCODING FALLBACK
    ================================================================ */
@@ -1520,226 +1719,202 @@ function normalizeForComparison(data) {
    ================================================================ */
 
 async function buildContent() {
-  const existing =
-    loadExistingContent();
+  const existing = loadExistingContent();
 
-  const existingById =
-    new Map(
-      existing.items.map(
-        item => [
-          item.id,
-          item
-        ]
-      )
+  const existingById = new Map(
+    existing.items.map(item => [item.id, item])
+  );
+
+  let feedItems = [];
+  let apiRecentVideos = new Map();
+  const feedXml = await fetchFeed();
+
+  if (feedXml) {
+    feedItems = parseFeed(feedXml);
+
+    console.log(
+      `Found ${feedItems.length} videos in the public feed.`
     );
+  } else if (API_KEY) {
+    const recentIds = await fetchUploadVideoIds({ all: false });
+    apiRecentVideos = await fetchYouTubeVideoDetails(recentIds);
 
-  /*
-   * STEP 1:
-   * Free YouTube Atom feed.
-   */
-  const feedXml =
-    await fetchFeed();
+    feedItems = Array.from(apiRecentVideos.values()).map(video => ({
+      id: video.id,
+      title: cleanText(video.snippet?.title),
+      publishedAt: video.snippet?.publishedAt || '',
+      updatedAt: video.snippet?.publishedAt || '',
+      description: cleanText(video.snippet?.description),
+      thumbnail:
+        video.snippet?.thumbnails?.high?.url ||
+        video.snippet?.thumbnails?.medium?.url ||
+        video.snippet?.thumbnails?.default?.url ||
+        `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`,
+      url: `https://www.youtube.com/watch?v=${video.id}`
+    }));
 
-  const feedItems =
-    parseFeed(feedXml);
-
-  if (
-    !feedItems.length
-  ) {
+    console.log(
+      `Using YouTube API fallback with ${feedItems.length} recent video(s).`
+    );
+  } else {
     throw new Error(
-      'YouTube feed contained zero videos.'
+      'YouTube public feed is unavailable and YOUTUBE_API_KEY is not configured.'
     );
   }
 
-  console.log(
-    `Found ${feedItems.length} videos in the public feed.`
-  );
-
-
-  /*
-   * STEP 2:
-   * Identify ONLY videos that aren't already known.
-   *
-   * Existing videos do not trigger API calls.
-   */
-  const newFeedItems =
-    feedItems.filter(
-      item =>
-        !existingById.has(
-          item.id
-        )
+  if (!feedItems.length) {
+    throw new Error(
+      'No YouTube videos were discovered.'
     );
+  }
+
+  /* --------------------------------------------------------------
+     ONE-TIME FULL HISTORY IMPORT
+     -------------------------------------------------------------- */
+
+  let items = existing.items.map(item => ({ ...item }));
+
+  if (FULL_HISTORY_IMPORT && !historyImportComplete()) {
+    console.log('');
+    console.log('========================================');
+    console.log('   STARTING ONE-TIME FULL HISTORY IMPORT');
+    console.log('========================================');
+    console.log('');
+
+    const imported = await fullHistoryImport(existingById);
+    const byId = new Map();
+
+    for (const item of items) {
+      byId.set(item.id, item);
+    }
+
+    for (const item of imported) {
+      byId.set(item.id, item);
+    }
+
+    items = Array.from(byId.values());
+
+    /*
+     * Mark the import only after all API work has completed.
+     * The workflow will commit this marker with content.json.
+     */
+    markHistoryImportComplete();
+
+    console.log(
+      'Full YouTube history import completed and marked as done.'
+    );
+  }
+
+  /* --------------------------------------------------------------
+     NORMAL INCREMENTAL UPDATE
+     -------------------------------------------------------------- */
+
+  const knownIds = new Set(items.map(item => item.id));
+
+  const newFeedItems = feedItems.filter(
+    item => !knownIds.has(item.id)
+  );
 
   console.log(
     `New videos discovered: ${newFeedItems.length}`
   );
 
+  let youtubeLocations = new Map();
 
-  /*
-   * STEP 3:
-   * Only now call YouTube Data API.
-   *
-   * Zero new videos = zero API calls.
-   */
-  const youtubeLocations =
-    await fetchYouTubeLocations(
-      newFeedItems.map(
-        item => item.id
-      )
-    );
-
-
-/*
- * STEP 4:
- * Start with existing content.
- *
- * This means videos outside the Atom feed are preserved.
- */
-const items =
-  existing.items.map(
-    item => ({
-      ...item
-    })
-  );
-
-
-/*
- * Re-run category detection for ALL existing videos.
- *
- * Category detection is local and does not use the YouTube API,
- * so this is safe to do every run.
- *
- * This allows classification rules to be improved later without
- * requiring videos to be newly published.
- */
-for (const item of items) {
-  item.category = categorizeVideo(item);
-}
-
-
-let geocodesUsed = 0;
-
-
-  /*
-   * STEP 5:
-   * Process ONLY new videos.
-   */
-  for (
-    const feedItem
-    of newFeedItems
-  ) {
-    const item = {
-      id:
-        feedItem.id,
-
-      title:
-        feedItem.title,
-
-      description:
-        feedItem.description,
-
-      url:
-        feedItem.url,
-
-      thumbnail:
-        feedItem.thumbnail ||
-        `https://i.ytimg.com/vi/${feedItem.id}/hqdefault.jpg`,
-
-      publishedAt:
-        feedItem.publishedAt,
-
-      updatedAt:
-        feedItem.updatedAt,
-
-      isShort:
-        detectShort(
-          feedItem,
-          null
-        ),
-
-category:
-  categorizeVideo(feedItem),
-
-      location:
-        '',
-
-      latitude:
-        null,
-
-      longitude:
-        null,
-
-      locationPrecision:
-        null,
-
-      locationSource:
-        null
-    };
-
-
-    /* ------------------------------------------------------------
-       Priority 1: YouTube place tag
-       ------------------------------------------------------------ */
-
-    const youtubeLocation =
-      youtubeLocations.get(
-        feedItem.id
-      );
-
-    if (
-      youtubeLocation
-    ) {
-      Object.assign(
-        item,
-        youtubeLocation
-      );
-    }
-
-
-    /* ------------------------------------------------------------
-       Priority 2: text-based location detection
-       ------------------------------------------------------------ */
-
-    else {
-      const detected =
-        detectLocation(
-          feedItem.title,
-          feedItem.description
-        );
+  if (apiRecentVideos.size && newFeedItems.length) {
+    /*
+     * The API fallback already fetched snippet + recordingDetails,
+     * so reuse that response instead of making a second videos.list
+     * request for the same videos.
+     */
+    for (const item of newFeedItems) {
+      const video = apiRecentVideos.get(item.id);
+      const coordinates = video?.recordingDetails?.location;
 
       if (
-        detected
+        coordinates &&
+        Number.isFinite(Number(coordinates.latitude)) &&
+        Number.isFinite(Number(coordinates.longitude))
       ) {
-        item.location =
-          detected;
+        youtubeLocations.set(item.id, {
+          location:
+            cleanText(video.recordingDetails?.locationDescription) ||
+            cleanText(video.snippet?.title),
+          latitude: Number(coordinates.latitude),
+          longitude: Number(coordinates.longitude),
+          locationPrecision: 'exact',
+          locationSource: 'youtube'
+        });
       }
     }
 
+    console.log(
+      `Reused API metadata for ${youtubeLocations.size} YouTube-mapped video(s).`
+    );
+  } else {
+    youtubeLocations =
+      await fetchYouTubeLocations(
+        newFeedItems.map(item => item.id)
+      );
+  }
 
-    /* ------------------------------------------------------------
-       Priority 3: geocoding fallback
-       ------------------------------------------------------------ */
+  /*
+   * Re-run category detection locally for every known video.
+   */
+  for (const item of items) {
+    item.category = categorizeVideo(item);
+  }
 
+  let geocodesUsed = 0;
+
+  for (const feedItem of newFeedItems) {
+    const youtubeLocation = youtubeLocations.get(feedItem.id);
+
+    const item = {
+      id: feedItem.id,
+      title: feedItem.title,
+      description: feedItem.description,
+      url: feedItem.url,
+      thumbnail:
+        feedItem.thumbnail ||
+        `https://i.ytimg.com/vi/${feedItem.id}/hqdefault.jpg`,
+      publishedAt: feedItem.publishedAt,
+      updatedAt: feedItem.updatedAt,
+      isShort: detectShort(feedItem, null),
+      category: categorizeVideo(feedItem),
+      location: '',
+      latitude: null,
+      longitude: null,
+      locationPrecision: null,
+      locationSource: null
+    };
+
+    /* Priority 1: YouTube place tag */
+    if (youtubeLocation) {
+      Object.assign(item, youtubeLocation);
+    } else {
+      /* Priority 2: text-based location detection */
+      const detected = detectLocation(
+        feedItem.title,
+        feedItem.description
+      );
+
+      if (detected) {
+        item.location = detected;
+      }
+    }
+
+    /* Priority 3: geocoding fallback */
     if (
       item.location &&
       typeof item.latitude !== 'number' &&
-      geocodesUsed <
-        MAX_GEOCODES_PER_RUN
+      geocodesUsed < MAX_GEOCODES_PER_RUN
     ) {
-      const result =
-        await geocodeLocation(
-          item.location
-        );
-
+      const result = await geocodeLocation(item.location);
       geocodesUsed++;
 
-      if (
-        result
-      ) {
-        Object.assign(
-          item,
-          result
-        );
+      if (result) {
+        Object.assign(item, result);
 
         console.log(
           `Geocoded: ${item.location} → ${result.latitude}, ${result.longitude}`
@@ -1750,122 +1925,57 @@ category:
         );
       }
 
-      /*
-       * Respect Nominatim's rate limit.
-       */
-      if (
-        geocodesUsed <
-        MAX_GEOCODES_PER_RUN
-      ) {
-        await sleep(
-          GEOCODE_DELAY_MS
-        );
+      if (geocodesUsed < MAX_GEOCODES_PER_RUN) {
+        await sleep(GEOCODE_DELAY_MS);
       }
     }
 
-
-    items.push(
-      item
-    );
+    items.push(item);
   }
 
-
-  /*
-   * STEP 6:
-   * Sort newest first.
-   */
   items.sort(
     (a, b) =>
-      new Date(
-        b.publishedAt || 0
-      ) -
-      new Date(
-        a.publishedAt || 0
-      )
+      new Date(b.publishedAt || 0) -
+      new Date(a.publishedAt || 0)
   );
 
-
-  /*
-   * STEP 7:
-   * Calculate statistics.
-   */
-  const mapped =
-    items.filter(
-      item =>
-        typeof item.latitude === 'number' &&
-        typeof item.longitude === 'number'
-    );
-
-  const youtubeMapped =
-    items.filter(
-      item =>
-        item.locationSource ===
-        'youtube'
-    );
-
-  console.log('');
-  console.log(
-    'Foodican update complete.'
-  );
-  console.log('');
-
-  console.log(
-    `Total videos: ${items.length}`
+  const mapped = items.filter(
+    item =>
+      typeof item.latitude === 'number' &&
+      typeof item.longitude === 'number'
   );
 
-  console.log(
-    `New videos processed: ${newFeedItems.length}`
-  );
-
-  console.log(
-    `Mapped videos: ${mapped.length}`
-  );
-
-  console.log(
-    `YouTube-mapped videos: ${youtubeMapped.length}`
-  );
-
-  console.log(
-    `Unmapped videos: ${items.length - mapped.length}`
+  const youtubeMapped = items.filter(
+    item => item.locationSource === 'youtube'
   );
 
   console.log('');
+  console.log('Foodican update complete.');
+  console.log('');
+  console.log(`Total videos: ${items.length}`);
+  console.log(`New videos processed: ${newFeedItems.length}`);
+  console.log(`Mapped videos: ${mapped.length}`);
+  console.log(`YouTube-mapped videos: ${youtubeMapped.length}`);
+  console.log(`Unmapped videos: ${items.length - mapped.length}`);
+  console.log('');
 
-
-  /*
-   * IMPORTANT:
-   *
-   * If nothing actually changed, preserve the previous
-   * generatedAt value.
-   */
   const candidate = {
     generatedAt:
       existing.generatedAt ||
       new Date().toISOString(),
-
-    channelId:
-      CHANNEL_ID,
-
-    channelHandle:
-      HANDLE,
-
+    channelId: CHANNEL_ID,
+    channelHandle: HANDLE,
     items
   };
 
-  const existingComparable =
-    normalizeForComparison(
-      existing
-    );
+  const existingComparable = normalizeForComparison(existing);
+  const candidateComparable = normalizeForComparison(candidate);
 
-  const candidateComparable =
-    normalizeForComparison(
-      candidate
-    );
-
-  if (
-    existingComparable ===
-    candidateComparable
-  ) {
+  /*
+   * The one-time history marker is intentionally not part of
+   * content.json. The workflow commits it separately.
+   */
+  if (existingComparable === candidateComparable) {
     console.log(
       'No actual content changes detected.'
     );
@@ -1873,11 +1983,7 @@ category:
     return existing;
   }
 
-  /*
-   * Actual content changed.
-   */
-  candidate.generatedAt =
-    new Date().toISOString();
+  candidate.generatedAt = new Date().toISOString();
 
   console.log(
     'Actual content changes detected.'
