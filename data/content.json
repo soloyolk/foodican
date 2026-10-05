@@ -1,8 +1,24 @@
 {
-  "generatedAt": "2026-10-05T05:58:41.446Z",
+  "generatedAt": "2026-10-05T06:33:17.790Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
+    {
+      "id": "6LsDQH1I_YY",
+      "title": "Easy Homemade Ranch Dressing",
+      "description": "Easy Ranch dressing recipe at home Ingredients: .5 cup mayonnaise .5 cup sour cream .5 cup buttermilk 1 tsp dill 1 tsp parsley 1 tsp salt 1 tsp onion powder 1 tsp garlic powder Black pepper to taste Chicken bouillon to taste #cooking #life #homemade #foodicanrecipes",
+      "url": "https://www.youtube.com/watch?v=6LsDQH1I_YY",
+      "thumbnail": "https://i.ytimg.com/vi/6LsDQH1I_YY/hqdefault.jpg",
+      "publishedAt": "2026-10-05T04:00:38Z",
+      "updatedAt": "2026-10-05T04:00:38Z",
+      "isShort": false,
+      "category": "food",
+      "location": "Frisco",
+      "latitude": 33.1496718,
+      "longitude": -96.835567,
+      "locationPrecision": "exact",
+      "locationSource": "youtube"
+    },
     {
       "id": "OdDExIJUxLM",
       "title": "Yohe Sushi & Seafood AYCE",
