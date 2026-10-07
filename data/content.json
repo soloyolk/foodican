@@ -1,8 +1,24 @@
 {
-  "generatedAt": "2026-10-05T06:33:17.790Z",
+  "generatedAt": "2026-10-07T06:06:18.940Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
+    {
+      "id": "Z40KGjL-zMU",
+      "title": "Trying Yorienn Korean Chicken in Carrollton 👀",
+      "description": "Checked out Yorienn Korean Chicken in Carrollton 🍗Tried it out and loved the food, flavors, and overall experience. Have you tried Yorienn yet? What Korean chicken spot should I check out next? #FoodicanAdventures #KoreanChicken #KoreanFood #SoyMarinatedCrab #CarrolltonTX #DFWFoodie #DallasFoodie",
+      "url": "https://www.youtube.com/watch?v=Z40KGjL-zMU",
+      "thumbnail": "https://i.ytimg.com/vi/Z40KGjL-zMU/hqdefault.jpg",
+      "publishedAt": "2026-10-07T01:41:26Z",
+      "updatedAt": "2026-10-07T01:41:26Z",
+      "isShort": false,
+      "category": "food",
+      "location": "Yorienn Korean Fried Chicken & Yori Shop of Carrollton",
+      "latitude": 33.0196645,
+      "longitude": -96.9318753,
+      "locationPrecision": "exact",
+      "locationSource": "youtube"
+    },
     {
       "id": "6LsDQH1I_YY",
       "title": "Easy Homemade Ranch Dressing",
