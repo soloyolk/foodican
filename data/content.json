@@ -1,8 +1,24 @@
 {
-  "generatedAt": "2026-10-07T06:06:18.940Z",
+  "generatedAt": "2026-10-10T05:58:36.606Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
+    {
+      "id": "2zZC6gSbdHQ",
+      "title": "TJ Filipino Cuisine - A Taste of the Philippines in Houston 🍽️",
+      "description": "Finally got to try TJ Filipino Cuisine in Houston 🍽️ From the first bite to the last, this was a fun spot to explore Filipino flavors and see what they’re all about. If you’re in Houston, have you been to TJ Filipino Cuisine? And what Filipino spot should be next on my list? 👀 #FoodicanAdventures #FilipinoFood #HoustonTX #GoodEats",
+      "url": "https://www.youtube.com/watch?v=2zZC6gSbdHQ",
+      "thumbnail": "https://i.ytimg.com/vi/2zZC6gSbdHQ/hqdefault.jpg",
+      "publishedAt": "2026-10-09T22:02:55Z",
+      "updatedAt": "2026-10-09T22:02:55Z",
+      "isShort": false,
+      "category": "food",
+      "location": "TJ Filipino Cuisine",
+      "latitude": 29.5791247,
+      "longitude": -95.3828928,
+      "locationPrecision": "exact",
+      "locationSource": "youtube"
+    },
     {
       "id": "Z40KGjL-zMU",
       "title": "Trying Yorienn Korean Chicken in Carrollton 👀",
