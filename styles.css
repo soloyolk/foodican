@@ -1084,3 +1084,16 @@ a{
     font-size:10px
   }
 }
+/* Return-to-latest links sit below each content section */
+.section-return{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:28px
+}
+
+@media (max-width:700px){
+  .section-return{
+    justify-content:flex-start;
+    margin-top:22px
+  }
+}
