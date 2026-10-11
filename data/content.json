@@ -1,8 +1,24 @@
 {
-  "generatedAt": "2026-10-10T05:58:36.606Z",
+  "generatedAt": "2026-10-11T05:53:44.194Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
+    {
+      "id": "KDeJrtnErIk",
+      "title": "85°C Bakery Just Opened in Prosper, TX!",
+      "description": "Stopped by the soft opening of 85°C Bakery in Prosper today! 🥐🍰☕️ From freshly baked breads to sweet treats, I had to check out this popular bakery’s newest location. Have you been to an 85°C Bakery before? What’s your go-to item? #FoodicanAdventures #85CBakery #ProsperTX #DFWFoodie #AsianBaking",
+      "url": "https://www.youtube.com/watch?v=KDeJrtnErIk",
+      "thumbnail": "https://i.ytimg.com/vi/KDeJrtnErIk/hqdefault.jpg",
+      "publishedAt": "2026-10-11T02:55:42Z",
+      "updatedAt": "2026-10-11T02:55:42Z",
+      "isShort": false,
+      "category": "food",
+      "location": "85°C Bakery Cafe - Prosper",
+      "latitude": 33.2198621,
+      "longitude": -96.8972958,
+      "locationPrecision": "exact",
+      "locationSource": "youtube"
+    },
     {
       "id": "2zZC6gSbdHQ",
       "title": "TJ Filipino Cuisine - A Taste of the Philippines in Houston 🍽️",
