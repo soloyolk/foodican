@@ -25,6 +25,15 @@ const HISTORY_MARKER_FILE =
     '.youtube-history-imported'
   );
 
+const METADATA_REFRESH_MARKER_FILE =
+  path.join(
+    process.cwd(),
+    'data',
+    '.youtube-metadata-refresh-date'
+  );
+
+const DAILY_METADATA_REFRESH_LIMIT = 50;
+
 const OUTPUT_FILE =
   path.join(
     process.cwd(),
@@ -1575,6 +1584,122 @@ function markHistoryImportComplete() {
 }
 
 
+function getUtcDateStamp() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function metadataRefreshAlreadyDoneToday() {
+  if (!fs.existsSync(METADATA_REFRESH_MARKER_FILE)) {
+    return false;
+  }
+
+  return fs.readFileSync(
+    METADATA_REFRESH_MARKER_FILE,
+    'utf8'
+  ).trim() === getUtcDateStamp();
+}
+
+function markMetadataRefreshDoneToday() {
+  fs.writeFileSync(
+    METADATA_REFRESH_MARKER_FILE,
+    `${getUtcDateStamp()}\n`
+  );
+}
+
+async function refreshLatestVideoMetadata(items) {
+  if (!API_KEY) {
+    console.log('Daily metadata refresh skipped: YOUTUBE_API_KEY is not configured.');
+    return false;
+  }
+
+  if (metadataRefreshAlreadyDoneToday()) {
+    console.log('Daily metadata refresh already completed today; skipping.');
+    return false;
+  }
+
+  const latestItems = [...items]
+    .filter(item => item && item.id)
+    .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0))
+    .slice(0, DAILY_METADATA_REFRESH_LIMIT);
+
+  if (!latestItems.length) {
+    console.log('Daily metadata refresh skipped: no known videos are available.');
+    return false;
+  }
+
+  console.log(`Daily metadata refresh: checking ${latestItems.length} latest video(s) in one videos.list request.`);
+
+  try {
+    // One videos.list request for up to 50 IDs costs 1 quota unit.
+    const videos = await fetchYouTubeVideoDetails(latestItems.map(item => item.id));
+    let metadataChanged = 0;
+
+    for (const item of latestItems) {
+      const video = videos.get(item.id);
+      if (!video) continue;
+
+      const snippet = video.snippet || {};
+      const recording = video.recordingDetails || {};
+      const coordinates = recording.location;
+      let changed = false;
+
+      // Refresh ordinary YouTube metadata while preserving the canonical URL and Short classification.
+      const refreshedTitle = cleanText(snippet.title);
+      const refreshedDescription = cleanText(snippet.description);
+      const refreshedPublishedAt = snippet.publishedAt || item.publishedAt;
+      const refreshedThumbnail =
+        snippet.thumbnails?.high?.url ||
+        snippet.thumbnails?.medium?.url ||
+        snippet.thumbnails?.default?.url ||
+        item.thumbnail;
+
+      if (refreshedTitle && item.title !== refreshedTitle) { item.title = refreshedTitle; changed = true; }
+      if (item.description !== refreshedDescription) { item.description = refreshedDescription; changed = true; }
+      if (refreshedPublishedAt && item.publishedAt !== refreshedPublishedAt) { item.publishedAt = refreshedPublishedAt; changed = true; }
+      if (refreshedThumbnail && item.thumbnail !== refreshedThumbnail) { item.thumbnail = refreshedThumbnail; changed = true; }
+
+      const hasCoordinates =
+        coordinates &&
+        Number.isFinite(Number(coordinates.latitude)) &&
+        Number.isFinite(Number(coordinates.longitude));
+
+      // Adopt a YouTube recording location if present, but never overwrite a curated/geocoded location.
+      const hasExistingCoordinates =
+        typeof item.latitude === 'number' &&
+        typeof item.longitude === 'number';
+      const canUpdateLocation =
+        !hasExistingCoordinates ||
+        item.locationSource === 'youtube';
+
+      if (hasCoordinates && canUpdateLocation) {
+        const nextLatitude = Number(coordinates.latitude);
+        const nextLongitude = Number(coordinates.longitude);
+        const nextLocation = cleanText(recording.locationDescription) || refreshedTitle || item.location || '';
+
+        if (item.latitude !== nextLatitude || item.longitude !== nextLongitude || item.location !== nextLocation || item.locationSource !== 'youtube' || item.locationPrecision !== 'exact') {
+          item.location = nextLocation;
+          item.latitude = nextLatitude;
+          item.longitude = nextLongitude;
+          item.locationPrecision = 'exact';
+          item.locationSource = 'youtube';
+          changed = true;
+        }
+      }
+
+      if (changed) metadataChanged++;
+    }
+
+    markMetadataRefreshDoneToday();
+    console.log(`Daily metadata refresh complete. Updated ${metadataChanged} video record(s); checked ${videos.size} video(s).`);
+    return true;
+  } catch (error) {
+    // A transient API failure should not break the regular RSS-based content update.
+    console.warn(`Daily metadata refresh failed; it will retry on a later workflow run: ${error.message}`);
+    return false;
+  }
+}
+
+
 async function fullHistoryImport(existingById) {
   if (!API_KEY) {
     throw new Error(
@@ -1938,6 +2063,10 @@ async function buildContent() {
       new Date(b.publishedAt || 0) -
       new Date(a.publishedAt || 0)
   );
+
+  // Once per UTC day, refresh metadata for the latest 50 known videos.
+  // This uses one videos.list request (1 quota unit) and never scans full history.
+  await refreshLatestVideoMetadata(items);
 
   const mapped = items.filter(
     item =>
