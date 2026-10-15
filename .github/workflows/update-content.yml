@@ -304,32 +304,28 @@ jobs:
       - name: Check for content changes
         id: changes
         run: |
-          if \
-            git diff --quiet -- data/content.json && \
-            git diff --quiet -- data/.youtube-history-imported && \
-            git ls-files --error-unmatch data/.youtube-history-imported >/dev/null 2>&1; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-
-            echo ''
-            echo 'No content changes detected.'
-            echo 'Skipping commit and deployment.'
+          if git diff --quiet -- data/content.json; then
+            echo "content_changed=false" >> "$GITHUB_OUTPUT"
           else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "content_changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
-            echo ''
-            echo 'Content changes detected.'
-            echo ''
-
-            git diff --stat -- data/content.json data/.youtube-history-imported
+          if [ -z "$(git status --porcelain -- data/content.json data/.youtube-history-imported data/.youtube-metadata-refresh-date)" ]; then
+            echo "files_changed=false" >> "$GITHUB_OUTPUT"
+            echo 'No content or marker changes detected.'
+          else
+            echo "files_changed=true" >> "$GITHUB_OUTPUT"
+            echo 'Content or marker changes detected.'
+            git status --short -- data/content.json data/.youtube-history-imported data/.youtube-metadata-refresh-date
           fi
 
 
       # ============================================================
-      # COMMIT CONTENT
+      # COMMIT CONTENT AND DAILY REFRESH MARKER
       # ============================================================
 
       - name: Commit content changes
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.files_changed == 'true'
         run: |
           git config user.name \
             'Foodican Bot'
@@ -337,9 +333,15 @@ jobs:
           git config user.email \
             '41898282+github-actions[bot]@users.noreply.github.com'
 
-          git add \
-            data/content.json \
-            data/.youtube-history-imported
+          git add data/content.json
+
+          if [ -f data/.youtube-history-imported ]; then
+            git add data/.youtube-history-imported
+          fi
+
+          if [ -f data/.youtube-metadata-refresh-date ]; then
+            git add data/.youtube-metadata-refresh-date
+          fi
 
           git commit \
             -m "chore: update Foodican content"
@@ -352,7 +354,7 @@ jobs:
       # ============================================================
 
       - name: Configure Pages
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.content_changed == 'true'
         uses: actions/configure-pages@v5
 
 
@@ -361,7 +363,7 @@ jobs:
       # ============================================================
 
       - name: Upload site
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.content_changed == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
@@ -372,6 +374,6 @@ jobs:
       # ============================================================
 
       - name: Deploy Foodican
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.content_changed == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
