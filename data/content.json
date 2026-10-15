@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-13T23:44:51.519Z",
+  "generatedAt": "2026-10-15T19:54:33.349Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
@@ -13,11 +13,11 @@
       "updatedAt": "2026-10-13T22:03:02Z",
       "isShort": false,
       "category": "life",
-      "location": "",
-      "latitude": null,
-      "longitude": null,
-      "locationPrecision": null,
-      "locationSource": null
+      "location": "Walmart Supercenter",
+      "latitude": 33.1798674,
+      "longitude": -96.8836914,
+      "locationPrecision": "exact",
+      "locationSource": "youtube"
     },
     {
       "id": "KDeJrtnErIk",
