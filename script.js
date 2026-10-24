@@ -170,55 +170,113 @@ function normalizeItem(item) {
 
 
 /* =========================================================
-   LATEST
+   PAGINATED VIDEO SECTIONS
    ========================================================= */
+
+const VIDEOS_PER_PAGE = 12;
+const sectionPages = Object.create(null);
 
 function renderLatest(items) {
-  renderGrid(
-    "latest-grid",
-    items.slice(0, 6)
-  );
+  renderGrid("latest-grid", items, "latest");
 }
-
-
-/* =========================================================
-   CATEGORY GRIDS
-   ========================================================= */
 
 function renderCategory(gridId, items, category) {
-
-  const filtered = items
-    .filter(item => item.category === category)
-    .slice(0, 6);
-
-  renderGrid(gridId, filtered);
+  const filtered = items.filter(item => item.category === category);
+  renderGrid(gridId, filtered, category);
 }
 
-
-/* =========================================================
-   GRID
-   ========================================================= */
-
-function renderGrid(gridId, items) {
-
+function renderGrid(gridId, items, sectionName = gridId) {
   const grid = document.getElementById(gridId);
-
   if (!grid) return;
 
-  if (!items.length) {
-    showGridMessage(
-      gridId,
-      "More Foodican adventures are coming soon."
-    );
+  const allItems = Array.isArray(items) ? items : [];
+  const totalPages = Math.max(1, Math.ceil(allItems.length / VIDEOS_PER_PAGE));
+  const page = Math.min(Math.max(sectionPages[gridId] || 1, 1), totalPages);
+  sectionPages[gridId] = page;
 
+  if (!allItems.length) {
+    grid.innerHTML = '<div class="empty-state">More Foodican adventures are coming soon.</div>';
+    const oldPagination = document.getElementById(`${gridId}-pagination`);
+    if (oldPagination) oldPagination.remove();
     return;
   }
 
-  grid.innerHTML = items
-    .map(renderCard)
-    .join("");
+  const start = (page - 1) * VIDEOS_PER_PAGE;
+  const pageItems = allItems.slice(start, start + VIDEOS_PER_PAGE);
+  grid.innerHTML = pageItems.map(renderCard).join("");
+  renderPagination(gridId, sectionName, allItems, page, totalPages, start);
 }
 
+function renderPagination(gridId, sectionName, allItems, page, totalPages, startIndex) {
+  const totalItems = allItems.length;
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+
+  let pagination = document.getElementById(`${gridId}-pagination`);
+  if (!pagination) {
+    pagination = document.createElement("nav");
+    pagination.id = `${gridId}-pagination`;
+    pagination.className = "video-pagination";
+    pagination.setAttribute("aria-label", `${sectionName} video pages`);
+    grid.insertAdjacentElement("afterend", pagination);
+
+    // Delegate clicks so pagination remains functional as its buttons update.
+    pagination.addEventListener("click", event => {
+      const button = event.target.closest("button[data-page]");
+      if (!button || button.disabled) return;
+      const nextPage = Number(button.dataset.page);
+      if (!Number.isInteger(nextPage)) return;
+      const latestItems = pagination._items || [];
+      const latestSectionName = pagination._sectionName || sectionName;
+      sectionPages[gridId] = nextPage;
+      renderGrid(gridId, latestItems, latestSectionName);
+      const activeButton = pagination.querySelector(`button[data-page="${nextPage}"]`);
+      if (activeButton) activeButton.focus({ preventScroll: true });
+    });
+  }
+
+  // Keep each section's complete list on its own pagination node.
+  pagination._items = allItems;
+  pagination._sectionName = sectionName;
+  pagination.hidden = totalPages <= 1;
+  if (totalPages <= 1) {
+    pagination.innerHTML = "";
+    return;
+  }
+
+  const firstShown = startIndex + 1;
+  const lastShown = Math.min(startIndex + VIDEOS_PER_PAGE, totalItems);
+  const pageNumbers = getPageNumbers(page, totalPages);
+  const pageButtons = pageNumbers.map(number => {
+    if (number === "…") return '<span class="pagination-ellipsis" aria-hidden="true">…</span>';
+    const current = number === page;
+    return `<button type="button" data-page="${number}" class="pagination-page${current ? " is-current" : ""}"${current ? ' aria-current="page" aria-label="Page ' + number + ', current page"' : ' aria-label="Go to page ' + number + '"'}>${number}</button>`;
+  }).join("");
+
+  pagination.innerHTML = `
+    <div class="pagination-summary">Showing ${firstShown}–${lastShown} of ${totalItems} videos</div>
+    <div class="pagination-controls">
+      <button type="button" data-page="${page - 1}" class="pagination-direction"${page === 1 ? " disabled" : ""} aria-label="Previous page">← Previous</button>
+      ${pageButtons}
+      <button type="button" data-page="${page + 1}" class="pagination-direction"${page === totalPages ? " disabled" : ""} aria-label="Next page">Next →</button>
+    </div>
+  `;
+}
+
+function getPageNumbers(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const pages = [1];
+  if (currentPage > 3) pages.push("…");
+  for (let number = Math.max(2, currentPage - 1); number <= Math.min(totalPages - 1, currentPage + 1); number++) {
+    pages.push(number);
+  }
+  if (currentPage < totalPages - 2) pages.push("…");
+  pages.push(totalPages);
+  return pages;
+}
 
 /* =========================================================
    CARD

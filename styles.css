@@ -440,6 +440,85 @@ a{
 
 
 /* =========================================================
+   VIDEO PAGINATION
+========================================================= */
+
+.video-pagination{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:14px;
+  margin:24px 0 8px
+}
+
+.pagination-summary{
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700
+}
+
+.pagination-controls{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:6px
+}
+
+.pagination-controls button{
+  min-height:40px;
+  padding:8px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:white;
+  color:var(--navy);
+  font:inherit;
+  font-size:13px;
+  font-weight:800;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,transform .15s ease
+}
+
+.pagination-controls button:hover:not(:disabled){
+  border-color:var(--gold);
+  transform:translateY(-1px)
+}
+
+.pagination-controls button.is-current{
+  background:var(--navy);
+  border-color:var(--navy);
+  color:white
+}
+
+.pagination-controls button:disabled{
+  opacity:.42;
+  cursor:not-allowed
+}
+
+.pagination-ellipsis{
+  padding:0 3px;
+  color:var(--muted)
+}
+
+@media(max-width:600px){
+  .video-pagination{
+    align-items:flex-start;
+    flex-direction:column
+  }
+
+  .pagination-controls{
+    justify-content:flex-start
+  }
+
+  .pagination-controls button{
+    min-height:38px;
+    padding:7px 10px
+  }
+}
+
+
+/* =========================================================
    FINDS
 ========================================================= */
 
