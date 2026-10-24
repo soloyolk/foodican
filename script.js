@@ -229,21 +229,17 @@ function renderPagination(gridId, sectionName, allItems, page, totalPages, start
       const latestItems = pagination._items || [];
       const latestSectionName = pagination._sectionName || sectionName;
       const section = grid.closest("section");
-      // Preserve this section's viewport position while its cards are replaced.
-      // Otherwise browser scroll anchoring can make the page appear to jump to
-      // another section when the grid height changes.
-      const sectionTopBefore = section ? section.getBoundingClientRect().top : null;
 
       sectionPages[gridId] = nextPage;
       renderGrid(gridId, latestItems, latestSectionName);
       const activeButton = pagination.querySelector(`button[data-page="${nextPage}"]`);
       if (activeButton) activeButton.focus({ preventScroll: true });
 
-      if (section && sectionTopBefore !== null) {
+      // Every pagination action returns the visitor to the top of the section
+      // they interacted with, using its CSS scroll-margin to clear the sticky header.
+      if (section) {
         requestAnimationFrame(() => {
-          const sectionTopAfter = section.getBoundingClientRect().top;
-          const offset = sectionTopAfter - sectionTopBefore;
-          if (Math.abs(offset) > 1) window.scrollBy(0, offset);
+          section.scrollIntoView({ behavior: "auto", block: "start" });
         });
       }
     });
