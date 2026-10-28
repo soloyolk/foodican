@@ -1,8 +1,24 @@
 {
-  "generatedAt": "2026-10-24T04:43:07.896Z",
+  "generatedAt": "2026-10-28T05:49:14.365Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
+    {
+      "id": "JAfHOIA7Fi4",
+      "title": "Tableside Tiramisu?! 🍰🤯 | Piccola Cucina, NYC",
+      "description": "Never knew tableside tiramisu was a thing until I stumbled upon Piccola Cucina Uptown in NYC! 🤯🍰 Watching them make it right at the table was such a cool experience, and the best part? It was AMAZING! 🤤 Definitely one of those unexpected food finds that makes exploring new restaurants so much fun. Have you ever tried tableside tiramisu? 👀🍰 #FoodicanAdventures #Tiramisu #PiccolaCucina #NYCEats #DessertLovers",
+      "url": "https://www.youtube.com/watch?v=JAfHOIA7Fi4",
+      "thumbnail": "https://i.ytimg.com/vi/JAfHOIA7Fi4/hqdefault.jpg",
+      "publishedAt": "2026-10-27T22:02:31Z",
+      "updatedAt": "2026-10-27T22:02:31Z",
+      "isShort": false,
+      "category": "food",
+      "location": "Piccola Cucina Uptown",
+      "latitude": 40.7632468,
+      "longitude": -73.9689825,
+      "locationPrecision": "exact",
+      "locationSource": "youtube"
+    },
     {
       "id": "4JEuJy6ICFY",
       "title": "Homemade NY-Style Pizza on a Pizza Steel 🍕🔥",
