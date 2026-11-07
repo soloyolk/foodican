@@ -1,8 +1,24 @@
 {
-  "generatedAt": "2026-11-04T00:38:43.734Z",
+  "generatedAt": "2026-11-07T06:06:02.187Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
+    {
+      "id": "ruuUIfxQqJg",
+      "title": "Southern Comfort Food?! 🤤 | Didi’s Downtown, Frisco, TX",
+      "description": "Craving some good old-fashioned comfort food? We checked out Didi’s Downtown for high-quality Southern and American classics! 🍽️ Sometimes you just can’t go wrong with a little Southern cooking. What’s your favorite comfort food restaurant? 👇 #FoodicanAdventures #DidisDowntown #SouthernFood #ComfortFood #AmericanCuisine",
+      "url": "https://www.youtube.com/watch?v=ruuUIfxQqJg",
+      "thumbnail": "https://i.ytimg.com/vi/ruuUIfxQqJg/hqdefault.jpg",
+      "publishedAt": "2026-11-06T23:04:17Z",
+      "updatedAt": "2026-11-06T23:04:17Z",
+      "isShort": false,
+      "category": "food",
+      "location": "Frisco, TX",
+      "latitude": 33.1505998,
+      "longitude": -96.8238183,
+      "locationPrecision": "city",
+      "locationSource": "geocoding"
+    },
     {
       "id": "373OnDLvTOw",
       "title": "Sizzling Japanese Comfort Food at Pepper Lunch in Frisco 🔥🍳",
