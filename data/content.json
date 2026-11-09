@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T06:06:02.187Z",
+  "generatedAt": "2026-11-09T06:43:52.336Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
@@ -29,11 +29,11 @@
       "updatedAt": "2026-11-03T22:03:49Z",
       "isShort": false,
       "category": "food",
-      "location": "Pepper Lunch in Frisco",
-      "latitude": null,
-      "longitude": null,
-      "locationPrecision": null,
-      "locationSource": null
+      "location": "Pepper Lunch",
+      "latitude": 33.1101483,
+      "longitude": -96.8041793,
+      "locationPrecision": "exact",
+      "locationSource": "youtube"
     },
     {
       "id": "EbHrZY11D4E",
@@ -45,11 +45,11 @@
       "updatedAt": "2026-10-30T22:04:46Z",
       "isShort": false,
       "category": "food",
-      "location": "Dominican Food Gem in Richardson, TX",
-      "latitude": null,
-      "longitude": null,
-      "locationPrecision": null,
-      "locationSource": null
+      "location": "Dominican Restaurant",
+      "latitude": 32.9562212,
+      "longitude": -96.7683611,
+      "locationPrecision": "exact",
+      "locationSource": "youtube"
     },
     {
       "id": "JAfHOIA7Fi4",
