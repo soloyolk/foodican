@@ -1,8 +1,24 @@
 {
-  "generatedAt": "2026-11-09T06:43:52.336Z",
+  "generatedAt": "2026-11-11T06:34:17.020Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
+    {
+      "id": "bvUuEc1rw74",
+      "title": "Tex-Mex Brunch?! 🍳🥂 | The Brunch District, Frisco, TX",
+      "description": "Checked out The Brunch District in Frisco for some brunch with a Tex-Mex twist! 🌶️ They’ve got the brunch classics you’d expect, with a little extra flavor mixed in. Any other favorite brunch places of yours that I should check out? #FoodicanAdventures #TheBrunchDistrict #FriscoTX #DFWBrunch #TexMex",
+      "url": "https://www.youtube.com/watch?v=bvUuEc1rw74",
+      "thumbnail": "https://i.ytimg.com/vi/bvUuEc1rw74/hqdefault.jpg",
+      "publishedAt": "2026-11-10T23:03:18Z",
+      "updatedAt": "2026-11-10T23:03:18Z",
+      "isShort": false,
+      "category": "food",
+      "location": "The Brunch District",
+      "latitude": 33.1893379,
+      "longitude": -96.8414952,
+      "locationPrecision": "exact",
+      "locationSource": "youtube"
+    },
     {
       "id": "ruuUIfxQqJg",
       "title": "Southern Comfort Food?! 🤤 | Didi’s Downtown, Frisco, TX",
