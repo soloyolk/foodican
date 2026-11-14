@@ -181,7 +181,13 @@ function renderLatest(items) {
 }
 
 function renderCategory(gridId, items, category) {
-  const filtered = items.filter(item => item.category === category);
+  // Travel videos are displayed in the Life section because the site
+  // does not have a separate Travel section. Keep their source category
+  // unchanged in content.json.
+  const filtered = items.filter(item =>
+    item.category === category ||
+    (category === "life" && item.category === "travel")
+  );
   renderGrid(gridId, filtered, category);
 }
 
