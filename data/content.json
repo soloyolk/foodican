@@ -1,8 +1,24 @@
 {
-  "generatedAt": "2026-11-11T06:34:17.020Z",
+  "generatedAt": "2026-11-14T00:55:13.335Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
+    {
+      "id": "uIthsL_Z57k",
+      "title": "Cantonese BBQ & Hong Kong Flavors?! 🥢🔥 | Bokee Chinese BBQ House, Plano, TX",
+      "description": "Craving some authentic Cantonese food? We checked out Bo Kee Chinese BBQ House in Plano, serving up Hong Kong-style flavors alongside traditional Chinese barbecue, rice dishes, and noodles. So far my favorite HK style restaurant in the DFW area! What’s your favorite Cantonese dish, and have you found any better places in the DFW area? 👇 #FoodicanAdventures #BokeeChineseBBQHouse #PlanoTX #CantoneseFood #ChineseBBQ #DFWEats",
+      "url": "https://www.youtube.com/watch?v=uIthsL_Z57k",
+      "thumbnail": "https://i.ytimg.com/vi/uIthsL_Z57k/hqdefault.jpg",
+      "publishedAt": "2026-11-13T23:04:30Z",
+      "updatedAt": "2026-11-13T23:04:30Z",
+      "isShort": false,
+      "category": "food",
+      "location": "Plano, TX",
+      "latitude": 33.0136764,
+      "longitude": -96.6925096,
+      "locationPrecision": "city",
+      "locationSource": "geocoding"
+    },
     {
       "id": "bvUuEc1rw74",
       "title": "Tex-Mex Brunch?! 🍳🥂 | The Brunch District, Frisco, TX",
