@@ -345,7 +345,23 @@ const CATEGORY_KEYWORDS = {
       "product review",
       "gadget",
       "gadgets",
-      "electronics"
+      "electronics",
+      "air purifier",
+      "air purifiers",
+      "air cleaner",
+      "air cleaners",
+      "air quality monitor",
+      "air quality monitors",
+      "humidifier",
+      "humidifiers",
+      "dehumidifier",
+      "dehumidifiers",
+      "vacuum cleaner",
+      "vacuum cleaners",
+      "robot vacuum",
+      "robot vacuums",
+      "home appliance",
+      "home appliances"
     ],
 
     // General technology
@@ -941,6 +957,13 @@ function categorizeVideo(video) {
   // Smart-home content is specifically Tech.
   if (
     /smart home|smart lock|smart thermostat|smart lighting|smart doorbell|security camera|home automation/.test(title)
+  ) {
+    scores.tech += 12;
+  }
+
+  // Home air-quality devices and household appliance reviews belong in Tech.
+  if (
+    /air purifier|air cleaner|air quality monitor|humidifier|dehumidifier|vacuum cleaner|robot vacuum|home appliance/.test(title)
   ) {
     scores.tech += 12;
   }
