@@ -140,7 +140,17 @@ function normalizeItem(item) {
         : ""),
 
     category:
-      String(item.category || "food").toLowerCase(),
+      String(item.category || (Array.isArray(item.categories) ? item.categories[0] : "food") || "food").toLowerCase(),
+
+    categories: (() => {
+      const raw = Array.isArray(item.categories) && item.categories.length
+        ? item.categories
+        : [item.category || "food"];
+      const normalized = [...new Set(raw.map(value => String(value).toLowerCase()))];
+      // Travel content has no standalone section; include it in Life.
+      if (normalized.includes("travel") && !normalized.includes("life")) normalized.push("life");
+      return normalized;
+    })(),
 
     location:
       item.location || "",
@@ -185,8 +195,7 @@ function renderCategory(gridId, items, category) {
   // does not have a separate Travel section. Keep their source category
   // unchanged in content.json.
   const filtered = items.filter(item =>
-    item.category === category ||
-    (category === "life" && item.category === "travel")
+    (Array.isArray(item.categories) ? item.categories : [item.category]).includes(category)
   );
   renderGrid(gridId, filtered, category);
 }
@@ -313,9 +322,14 @@ function renderCard(item) {
     item.url
   );
 
-  const category = escapeHtml(
-    formatCategory(item.category)
-  );
+  const categoryList = Array.isArray(item.categories) && item.categories.length
+    ? item.categories
+    : [item.category || "food"];
+  const category = categoryList
+    .map(value => value === "travel" ? "life" : value)
+    .filter((value, index, list) => list.indexOf(value) === index)
+    .map(value => `<span>${escapeHtml(formatCategory(value))}</span>`)
+    .join("");
 
   const date = formatDate(
     item.publishedAt
@@ -355,7 +369,7 @@ function renderCard(item) {
 
         <div class="card-meta">
 
-          <span>${category}</span>
+          ${category}
 
           ${date
             ? `<span>•</span><span>${date}</span>`

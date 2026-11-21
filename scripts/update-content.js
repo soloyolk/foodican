@@ -723,10 +723,39 @@ function categorizeVideo(video) {
 
   const hashtags = [
     ...(title.match(/#[a-z0-9_-]+/gi) || []),
-    ...(description.match(/#[a-z0-9_-]+/gi) || [])
+    ...(description.match(/#[a-z0-9_-]+/gi) || []),
+    ...(tags.match(/#[a-z0-9_-]+/gi) || [])
   ]
     .map(normalizeText)
     .join(" ");
+
+  // Explicit category hashtags can assign more than one section.
+  // These are checked before automatic keyword scoring.
+  const hashtagCategories = {
+    "#foodicanfood": "food",
+    "#food": "food",
+    "#foodie": "food",
+    "#foodreview": "food",
+    "#foodicantech": "tech",
+    "#tech": "tech",
+    "#technology": "tech",
+    "#techreview": "tech",
+    "#gadgets": "tech",
+    "#electronics": "tech",
+    "#foodicanlife": "life",
+    "#life": "life",
+    "#lifehack": "life",
+    "#lifehacks": "life",
+    "#foodicantravel": "travel",
+    "#travel": "travel",
+    "#traveling": "travel"
+  };
+
+  const explicitCategories = [...new Set(
+    (hashtags.match(/#[a-z0-9_-]+/gi) || [])
+      .map(tag => hashtagCategories[tag.toLowerCase()])
+      .filter(Boolean)
+  )];
 
   // Title gets the most influence.
   const titleText = title;
@@ -991,39 +1020,23 @@ function categorizeVideo(video) {
     .sort((a, b) => b[1] - a[1]);
 
   const [winner, winningScore] = sorted[0];
-  const [, secondScore] = sorted[1];
 
-  // If absolutely nothing meaningful matched, default to Life.
-  // This avoids pretending we know the category when we don't.
+  // Keep the strongest category, then include other categories when
+  // there is meaningful independent evidence for them. This avoids
+  // assigning every video to every section while supporting overlap.
   if (winningScore === 0) {
-    return "life";
+    return explicitCategories.length ? explicitCategories : ["life"];
   }
 
-  // If the winner has a meaningful lead, use it.
-  if (winningScore >= secondScore + 3) {
-    return winner;
-  }
+  const automaticallySelected = sorted
+    .filter(([category, score]) =>
+      category === winner || (score >= 8 && score >= winningScore * 0.4)
+    )
+    .map(([category]) => category);
 
-  // For close calls, favor highly specific categories based
-  // on the strongest evidence rather than a generic fallback.
-
-  if (scores.food >= 8) {
-    return "food";
-  }
-
-  if (scores.tech >= 8) {
-    return "tech";
-  }
-
-  if (scores.travel >= 8) {
-    return "travel";
-  }
-
-  if (scores.life >= 8) {
-    return "life";
-  }
-
-  return winner;
+  // Hashtags are guaranteed assignments; strong content signals can add
+  // further categories, so #lifehack on a tech review can produce both.
+  return [...new Set([...explicitCategories, ...automaticallySelected])];
 }
 
 
@@ -1499,16 +1512,20 @@ function videoApiItemToContentItem(video, existing = null) {
       },
       existing
     ),
-    category: categorizeVideo({
+    categories: categorizeVideo({
       title: snippet.title,
-      description: snippet.description
+      description: snippet.description,
+      tags: snippet.tags || []
     }),
+    category: "life", // legacy primary category, normalized below
     location: '',
     latitude: null,
     longitude: null,
     locationPrecision: null,
     locationSource: null
   };
+
+  item.category = item.categories[0] || "life";
 
   if (
     coordinates &&
@@ -2010,7 +2027,8 @@ async function buildContent() {
    * Re-run category detection locally for every known video.
    */
   for (const item of items) {
-    item.category = categorizeVideo(item);
+    item.categories = categorizeVideo(item);
+    item.category = item.categories[0] || "life"; // legacy compatibility
   }
 
   let geocodesUsed = 0;
@@ -2029,13 +2047,16 @@ async function buildContent() {
       publishedAt: feedItem.publishedAt,
       updatedAt: feedItem.updatedAt,
       isShort: detectShort(feedItem, null),
-      category: categorizeVideo(feedItem),
+      categories: categorizeVideo(feedItem),
+      category: "life", // legacy primary category, set from categories below
       location: '',
       latitude: null,
       longitude: null,
       locationPrecision: null,
       locationSource: null
     };
+
+    item.category = item.categories[0] || "life";
 
     /* Priority 1: YouTube place tag */
     if (youtubeLocation) {
