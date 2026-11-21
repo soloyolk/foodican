@@ -17,7 +17,10 @@
       "latitude": 33.1505998,
       "longitude": -96.8238183,
       "locationPrecision": "city",
-      "locationSource": "geocoding"
+      "locationSource": "geocoding",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "nIG0ozw9t9w",
@@ -33,7 +36,10 @@
       "latitude": 33.1717793,
       "longitude": -96.8369424,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "tech"
+      ]
     },
     {
       "id": "uIthsL_Z57k",
@@ -49,7 +55,10 @@
       "latitude": 33.0136764,
       "longitude": -96.6925096,
       "locationPrecision": "city",
-      "locationSource": "geocoding"
+      "locationSource": "geocoding",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "bvUuEc1rw74",
@@ -65,7 +74,10 @@
       "latitude": 33.1893379,
       "longitude": -96.8414952,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "ruuUIfxQqJg",
@@ -81,7 +93,10 @@
       "latitude": 33.1505998,
       "longitude": -96.8238183,
       "locationPrecision": "city",
-      "locationSource": "geocoding"
+      "locationSource": "geocoding",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "373OnDLvTOw",
@@ -97,7 +112,10 @@
       "latitude": 33.1101483,
       "longitude": -96.8041793,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "EbHrZY11D4E",
@@ -113,7 +131,10 @@
       "latitude": 32.9562212,
       "longitude": -96.7683611,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "JAfHOIA7Fi4",
@@ -129,7 +150,10 @@
       "latitude": 40.7632468,
       "longitude": -73.9689825,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "4JEuJy6ICFY",
@@ -145,7 +169,11 @@
       "latitude": 33.1496718,
       "longitude": -96.835567,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food",
+        "life"
+      ]
     },
     {
       "id": "dtu2ClZWMK8",
@@ -161,7 +189,10 @@
       "latitude": 29.6335078,
       "longitude": -95.2365327,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "cmvVfFYnrvQ",
@@ -177,7 +208,11 @@
       "latitude": 34.1983122,
       "longitude": -118.3574036,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "travel",
+        "life"
+      ]
     },
     {
       "id": "5cKbM6HPo5M",
@@ -193,7 +228,10 @@
       "latitude": 33.1496718,
       "longitude": -96.835567,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "RSTIRGzYDMw",
@@ -209,7 +247,10 @@
       "latitude": 33.1798674,
       "longitude": -96.8836914,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "life"
+      ]
     },
     {
       "id": "KDeJrtnErIk",
@@ -225,7 +266,10 @@
       "latitude": 33.2198621,
       "longitude": -96.8972958,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "2zZC6gSbdHQ",
@@ -241,7 +285,10 @@
       "latitude": 29.5791247,
       "longitude": -95.3828928,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "Z40KGjL-zMU",
@@ -257,7 +304,10 @@
       "latitude": 33.0196645,
       "longitude": -96.9318753,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "6LsDQH1I_YY",
@@ -273,7 +323,11 @@
       "latitude": 33.1496718,
       "longitude": -96.835567,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food",
+        "life"
+      ]
     },
     {
       "id": "OdDExIJUxLM",
@@ -289,7 +343,10 @@
       "latitude": 33.2212543,
       "longitude": -96.6360524,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "IS3TpEqQ4Vw",
@@ -305,7 +362,10 @@
       "latitude": 29.7030634,
       "longitude": -95.568247,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "y-YbxBRmhS4",
@@ -321,7 +381,10 @@
       "latitude": 33.2233689,
       "longitude": -96.7995645,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     },
     {
       "id": "4e_XsPb_csw",
@@ -337,7 +400,10 @@
       "latitude": 33.221795,
       "longitude": -96.7987759,
       "locationPrecision": "exact",
-      "locationSource": "youtube"
+      "locationSource": "youtube",
+      "categories": [
+        "food"
+      ]
     }
   ]
 }
