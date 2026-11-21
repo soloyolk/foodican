@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-21T01:34:08.985Z",
+  "generatedAt": "2026-11-21T21:41:25.289Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
@@ -164,15 +164,15 @@
       "publishedAt": "2026-10-23T22:03:06Z",
       "updatedAt": "2026-10-23T22:17:05+00:00",
       "isShort": true,
-      "category": "food",
+      "category": "life",
       "location": "Frisco",
       "latitude": 33.1496718,
       "longitude": -96.835567,
       "locationPrecision": "exact",
       "locationSource": "youtube",
       "categories": [
-        "food",
-        "life"
+        "life",
+        "food"
       ]
     },
     {
@@ -210,8 +210,7 @@
       "locationPrecision": "exact",
       "locationSource": "youtube",
       "categories": [
-        "travel",
-        "life"
+        "travel"
       ]
     },
     {
@@ -318,15 +317,15 @@
       "publishedAt": "2026-10-05T04:00:38Z",
       "updatedAt": "2026-10-05T04:00:38Z",
       "isShort": false,
-      "category": "food",
+      "category": "life",
       "location": "Frisco",
       "latitude": 33.1496718,
       "longitude": -96.835567,
       "locationPrecision": "exact",
       "locationSource": "youtube",
       "categories": [
-        "food",
-        "life"
+        "life",
+        "food"
       ]
     },
     {
