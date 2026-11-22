@@ -84,6 +84,69 @@ a{
   color:var(--navy2)
 }
 
+
+.nav a.is-active{
+  opacity:1;
+  color:var(--navy);
+  position:relative
+}
+
+.nav a.is-active::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:-10px;
+  height:3px;
+  border-radius:999px;
+  background:var(--gold)
+}
+
+.section-jump a.is-active{
+  background:var(--navy);
+  border-color:var(--navy);
+  color:white;
+  box-shadow:0 5px 14px rgba(16,42,67,.14)
+}
+
+.back-to-top{
+  position:fixed;
+  right:24px;
+  bottom:24px;
+  z-index:50;
+  width:52px;
+  height:52px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.28);
+  border-radius:50%;
+  background:var(--navy);
+  color:white;
+  box-shadow:0 8px 24px rgba(16,42,67,.25);
+  font:700 27px/1 'DM Sans',system-ui,sans-serif;
+  cursor:pointer;
+  opacity:0;
+  visibility:hidden;
+  transform:translateY(12px);
+  transition:opacity .2s ease,transform .2s ease,visibility .2s ease,background .2s ease
+}
+
+.back-to-top:hover{
+  background:var(--navy2);
+  transform:translateY(-2px)
+}
+
+.back-to-top.is-visible{
+  opacity:1;
+  visibility:visible;
+  transform:translateY(0)
+}
+
+.back-to-top:focus-visible{
+  outline:3px solid var(--gold);
+  outline-offset:4px
+}
+
 .menu-btn{
   display:none;
   border:0;
@@ -965,6 +1028,22 @@ a{
 
   .menu-btn{
     display:block
+  }
+
+  .back-to-top{
+    right:16px;
+    bottom:16px;
+    width:48px;
+    height:48px
+  }
+
+  .nav a.is-active::after{
+    display:none
+  }
+
+  .nav a.is-active{
+    padding-left:10px;
+    border-left:3px solid var(--gold)
   }
 
   .hero{

@@ -7,6 +7,8 @@ const CONTENT_URL = "data/content.json";
 
 document.addEventListener("DOMContentLoaded", () => {
   initMobileMenu();
+  initSectionNavigation();
+  initBackToTop();
   loadFoodicanContent();
 });
 
@@ -37,6 +39,92 @@ function initMobileMenu() {
   });
 }
 
+
+/* =========================================================
+   ACTIVE SECTION NAVIGATION
+   ========================================================= */
+
+function initSectionNavigation() {
+  const links = [...document.querySelectorAll(
+    '.nav a[href^="#"], .section-jump a[href^="#"]'
+  )];
+  const sections = [...new Set(links
+    .map(link => document.querySelector(link.getAttribute("href")))
+    .filter(Boolean))];
+
+  if (!links.length || !sections.length) return;
+
+  const setActiveSection = sectionId => {
+    links.forEach(link => {
+      const isActive = link.getAttribute("href") === `#${sectionId}`;
+      link.classList.toggle("is-active", isActive);
+      if (isActive) {
+        link.setAttribute("aria-current", "location");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+  };
+
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(entries => {
+      const visibleSections = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+
+      if (visibleSections.length) {
+        setActiveSection(visibleSections[0].target.id);
+      }
+    }, {
+      // The active section changes as it enters the upper-middle part
+      // of the viewport, accounting for the sticky site header.
+      rootMargin: "-18% 0px -68% 0px",
+      threshold: 0
+    });
+
+    sections.forEach(section => observer.observe(section));
+  }
+
+  // Update immediately when a visitor uses a menu link, including on mobile.
+  links.forEach(link => {
+    link.addEventListener("click", () => {
+      const targetId = link.getAttribute("href").slice(1);
+      setActiveSection(targetId);
+    });
+  });
+
+  // Honor a section link if the page is opened with a hash in its URL.
+  const initialId = window.location.hash.slice(1);
+  if (initialId && sections.some(section => section.id === initialId)) {
+    setActiveSection(initialId);
+  }
+}
+
+
+/* =========================================================
+   BACK TO TOP BUTTON
+   ========================================================= */
+
+function initBackToTop() {
+  const button = document.getElementById("back-to-top");
+  if (!button) return;
+
+  const updateVisibility = () => {
+    button.classList.toggle("is-visible", window.scrollY > 420);
+  };
+
+  window.addEventListener("scroll", updateVisibility, { passive: true });
+  updateVisibility();
+
+  button.addEventListener("click", () => {
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth"
+    });
+  });
+}
 
 /* =========================================================
    LOAD CONTENT
