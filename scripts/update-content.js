@@ -724,7 +724,7 @@ function isFoodicanFind(video, existing = null) {
     ? video.tags.join(" ")
     : String(video?.tags || "");
 
-  return /#foodicanfinds\\b/i.test(`${title} ${description} ${tags}`);
+  return /#foodicanfinds\b/i.test(`${title} ${description} ${tags}`);
 }
 
 // ============================================================
@@ -1721,6 +1721,18 @@ async function refreshLatestVideoMetadata(items) {
       if (item.description !== refreshedDescription) { item.description = refreshedDescription; changed = true; }
       if (refreshedPublishedAt && item.publishedAt !== refreshedPublishedAt) { item.publishedAt = refreshedPublishedAt; changed = true; }
       if (refreshedThumbnail && item.thumbnail !== refreshedThumbnail) { item.thumbnail = refreshedThumbnail; changed = true; }
+
+      // Re-check Finds using current YouTube metadata, including the video's Tags field.
+      // Keep an existing manual Finds selection, even if the hashtag is later removed.
+      const refreshedFinds = isFoodicanFind({
+        title: refreshedTitle || item.title,
+        description: refreshedDescription,
+        tags: Array.isArray(snippet.tags) ? snippet.tags : []
+      }, item);
+      if (item.finds !== refreshedFinds) {
+        item.finds = refreshedFinds;
+        changed = true;
+      }
 
       const hasCoordinates =
         coordinates &&
