@@ -634,6 +634,20 @@ a{
   max-width:680px
 }
 
+.finds-listing{
+  margin-top:48px
+}
+
+.finds-listing .section-heading p{
+  margin:8px 0 0;
+  color:var(--muted)
+}
+
+.finds-card-badge{
+  color:var(--gold) !important;
+  font-weight:700
+}
+
 .pill-row{
   display:flex;
   flex-wrap:wrap;

@@ -709,6 +709,25 @@ function countMatches(text, keywords) {
 
 
 // ============================================================
+// FOODICAN FINDS CURATION
+// ============================================================
+
+// Finds is intentionally separate from the Food/Tech/Life categories.
+// Add #foodicanfinds to a video's title, description, or YouTube tags,
+// or set "finds": true directly on that video's object in data/content.json.
+function isFoodicanFind(video, existing = null) {
+  if (existing?.finds === true || video?.finds === true) return true;
+
+  const title = String(video?.title || "");
+  const description = String(video?.description || "");
+  const tags = Array.isArray(video?.tags)
+    ? video.tags.join(" ")
+    : String(video?.tags || "");
+
+  return /#foodicanfinds\\b/i.test(`${title} ${description} ${tags}`);
+}
+
+// ============================================================
 // CATEGORY ENGINE
 // ============================================================
 
@@ -1517,6 +1536,11 @@ function videoApiItemToContentItem(video, existing = null) {
       description: snippet.description,
       tags: snippet.tags || []
     }),
+    finds: isFoodicanFind({
+      title: snippet.title,
+      description: snippet.description,
+      tags: snippet.tags || []
+    }, existing),
     category: "life", // legacy primary category, normalized below
     location: '',
     latitude: null,
@@ -2029,6 +2053,8 @@ async function buildContent() {
   for (const item of items) {
     item.categories = categorizeVideo(item);
     item.category = item.categories[0] || "life"; // legacy compatibility
+    // Keep manual curation, and also honor #foodicanfinds if present.
+    item.finds = isFoodicanFind(item);
   }
 
   let geocodesUsed = 0;
@@ -2048,6 +2074,7 @@ async function buildContent() {
       updatedAt: feedItem.updatedAt,
       isShort: detectShort(feedItem, null),
       categories: categorizeVideo(feedItem),
+      finds: isFoodicanFind(feedItem),
       category: "life", // legacy primary category, set from categories below
       location: '',
       latitude: null,

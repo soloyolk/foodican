@@ -154,6 +154,7 @@ async function loadFoodicanContent() {
     renderCategory("food-grid", items, "food");
     renderCategory("tech-grid", items, "tech");
     renderCategory("life-grid", items, "life");
+    renderFinds(items);
 
     await initFoodicanMap(items);
 
@@ -240,6 +241,8 @@ function normalizeItem(item) {
       return normalized;
     })(),
 
+    finds: item.finds === true,
+
     location:
       item.location || "",
 
@@ -276,6 +279,13 @@ const sectionPages = Object.create(null);
 
 function renderLatest(items) {
   renderGrid("latest-grid", items, "latest");
+}
+
+function renderFinds(items) {
+  // Finds is a curated collection, separate from the regular content categories.
+  // A video appears here only when explicitly marked finds: true or tagged #foodicanfinds.
+  const curatedItems = items.filter(item => item.finds === true);
+  renderGrid("finds-grid", curatedItems, "finds");
 }
 
 function renderCategory(gridId, items, category) {
@@ -418,6 +428,9 @@ function renderCard(item) {
     .filter((value, index, list) => list.indexOf(value) === index)
     .map(value => `<span>${escapeHtml(formatCategory(value))}</span>`)
     .join("");
+  const findsBadge = item.finds === true
+    ? '<span class="finds-card-badge">Foodican Find</span>'
+    : "";
 
   const date = formatDate(
     item.publishedAt
@@ -458,6 +471,7 @@ function renderCard(item) {
         <div class="card-meta">
 
           ${category}
+          ${findsBadge}
 
           ${date
             ? `<span>•</span><span>${date}</span>`
