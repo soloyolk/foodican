@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-22T05:16:46.373Z",
+  "generatedAt": "2026-11-22T05:24:40.337Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
@@ -61,7 +61,7 @@
       "categories": [
         "food"
       ],
-      "finds": false
+      "finds": true
     },
     {
       "id": "bvUuEc1rw74",
@@ -101,7 +101,7 @@
       "categories": [
         "food"
       ],
-      "finds": false
+      "finds": true
     },
     {
       "id": "373OnDLvTOw",
@@ -262,7 +262,7 @@
       "categories": [
         "life"
       ],
-      "finds": false
+      "finds": true
     },
     {
       "id": "KDeJrtnErIk",
