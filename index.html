@@ -157,7 +157,10 @@
 
   <footer class="footer">
     <div class="container footer-inner">
-      <div>© <span id="year"></span> Foodican</div>
+      <div>© <span id="copyright-year"></span> Foodican</div>
+<script>
+  document.getElementById("copyright-year").textContent = new Date().getFullYear();
+</script>
       <div>Eat. Explore. Repeat. <span class="footer-dot">●</span> <a href="#top">Back to top ↑</a></div>
     </div>
   </footer>
