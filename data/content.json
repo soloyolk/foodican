@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-21T21:41:25.289Z",
+  "generatedAt": "2026-11-22T05:16:46.373Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
@@ -20,7 +20,8 @@
       "locationSource": "geocoding",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "nIG0ozw9t9w",
@@ -39,12 +40,13 @@
       "locationSource": "youtube",
       "categories": [
         "tech"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "uIthsL_Z57k",
       "title": "Cantonese BBQ & Hong Kong Flavors?! 🥢🔥 | Bokee Chinese BBQ House, Plano, TX",
-      "description": "Craving some authentic Cantonese food? We checked out Bo Kee Chinese BBQ House in Plano, serving up Hong Kong-style flavors alongside traditional Chinese barbecue, rice dishes, and noodles. So far my favorite HK style restaurant in the DFW area! What’s your favorite Cantonese dish, and have you found any better places in the DFW area? 👇 #FoodicanAdventures #BokeeChineseBBQHouse #PlanoTX #CantoneseFood #ChineseBBQ #DFWEats",
+      "description": "Craving some authentic Cantonese food? We checked out Bo Kee Chinese BBQ House in Plano, serving up Hong Kong-style flavors alongside traditional Chinese barbecue, rice dishes, and noodles. So far my favorite HK style restaurant in the DFW area! What’s your favorite Cantonese dish, and have you found any better places in the DFW area? 👇 #FoodicanAdventures #BokeeChineseBBQHouse #PlanoTX #CantoneseFood #ChineseBBQ #DFWEats #FoodicanFinds",
       "url": "https://www.youtube.com/watch?v=uIthsL_Z57k",
       "thumbnail": "https://i.ytimg.com/vi/uIthsL_Z57k/hqdefault.jpg",
       "publishedAt": "2026-11-13T23:04:30Z",
@@ -58,7 +60,8 @@
       "locationSource": "geocoding",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "bvUuEc1rw74",
@@ -77,12 +80,13 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "ruuUIfxQqJg",
       "title": "Southern Comfort Food?! 🤤 | Didi’s Downtown, Frisco, TX",
-      "description": "Craving some good old-fashioned comfort food? We checked out Didi’s Downtown for high-quality Southern and American classics! 🍽️ Sometimes you just can’t go wrong with a little Southern cooking. What’s your favorite comfort food restaurant? 👇 #FoodicanAdventures #DidisDowntown #SouthernFood #ComfortFood #AmericanCuisine",
+      "description": "Craving some good old-fashioned comfort food? We checked out Didi’s Downtown for high-quality Southern and American classics! 🍽️ Sometimes you just can’t go wrong with a little Southern cooking. What’s your favorite comfort food restaurant? 👇 #FoodicanAdventures #DidisDowntown #SouthernFood #ComfortFood #AmericanCuisine #FoodicanFinds",
       "url": "https://www.youtube.com/watch?v=ruuUIfxQqJg",
       "thumbnail": "https://i.ytimg.com/vi/ruuUIfxQqJg/hqdefault.jpg",
       "publishedAt": "2026-11-06T23:04:17Z",
@@ -96,7 +100,8 @@
       "locationSource": "geocoding",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "373OnDLvTOw",
@@ -115,7 +120,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "EbHrZY11D4E",
@@ -134,7 +140,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "JAfHOIA7Fi4",
@@ -153,7 +160,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "4JEuJy6ICFY",
@@ -173,7 +181,8 @@
       "categories": [
         "life",
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "dtu2ClZWMK8",
@@ -192,7 +201,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "cmvVfFYnrvQ",
@@ -211,7 +221,8 @@
       "locationSource": "youtube",
       "categories": [
         "travel"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "5cKbM6HPo5M",
@@ -230,12 +241,13 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "RSTIRGzYDMw",
       "title": "Walmart Has a Secret Life Hack 👀",
-      "description": "Did you know the Walmart app can help you find EXACTLY where an item is on a shelf in the store? 👀📱 No more wandering every aisle aimlessly looking for it! Would you use this Walmart hack? 🛒 #Walmart #LifeHacks #ShoppingHacks #FoodicanLife",
+      "description": "Did you know the Walmart app can help you find EXACTLY where an item is on a shelf in the store? 👀📱 No more wandering every aisle aimlessly looking for it! Would you use this Walmart hack? 🛒 #Walmart #LifeHacks #ShoppingHacks #FoodicanLife #FoodicanFinds",
       "url": "https://www.youtube.com/watch?v=RSTIRGzYDMw",
       "thumbnail": "https://i.ytimg.com/vi/RSTIRGzYDMw/hqdefault.jpg",
       "publishedAt": "2026-10-13T22:03:02Z",
@@ -249,7 +261,8 @@
       "locationSource": "youtube",
       "categories": [
         "life"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "KDeJrtnErIk",
@@ -268,7 +281,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "2zZC6gSbdHQ",
@@ -287,7 +301,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "Z40KGjL-zMU",
@@ -306,7 +321,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "6LsDQH1I_YY",
@@ -326,7 +342,8 @@
       "categories": [
         "life",
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "OdDExIJUxLM",
@@ -345,7 +362,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "IS3TpEqQ4Vw",
@@ -364,7 +382,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "y-YbxBRmhS4",
@@ -383,7 +402,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     },
     {
       "id": "4e_XsPb_csw",
@@ -402,7 +422,8 @@
       "locationSource": "youtube",
       "categories": [
         "food"
-      ]
+      ],
+      "finds": false
     }
   ]
 }
