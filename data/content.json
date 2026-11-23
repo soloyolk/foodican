@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-22T05:24:40.337Z",
+  "generatedAt": "2026-11-23T00:55:40.674Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
@@ -368,7 +368,7 @@
     {
       "id": "IS3TpEqQ4Vw",
       "title": "Kim Sơn Vietnamese Buffet (Houston, TX)",
-      "description": "Taking my Foodican adventures over to Houston's Kim Sơn Vietnamese buffet! 🦐 #kimsơn #vietnamese #foodicanadventures",
+      "description": "Taking my Foodican adventures over to Houston's Kim Sơn Vietnamese buffet! 🦐 #kimsơn #vietnamese #foodicanadventures #FoodicanFinds",
       "url": "https://www.youtube.com/watch?v=IS3TpEqQ4Vw",
       "thumbnail": "https://i.ytimg.com/vi/IS3TpEqQ4Vw/hqdefault.jpg",
       "publishedAt": "2026-09-22T02:20:38Z",
@@ -383,7 +383,7 @@
       "categories": [
         "food"
       ],
-      "finds": false
+      "finds": true
     },
     {
       "id": "y-YbxBRmhS4",
