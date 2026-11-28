@@ -1,8 +1,28 @@
 {
-  "generatedAt": "2026-11-27T00:37:57.981Z",
+  "generatedAt": "2026-11-28T00:04:44.287Z",
   "channelId": "UCE6VXOmQeNKBqVspyX5qoWA",
   "channelHandle": "@thefoodican",
   "items": [
+    {
+      "id": "QF_DKCFM27g",
+      "title": "Korean BBQ AND Hot Pot?! 🔥🥩 | 88 Korean BBQ & Hot Pot, Frisco, TX",
+      "description": "Why choose between Korean BBQ and hot pot when you can have both?! We checked out 88 Korean BBQ & Hot Pot in Frisco for a meal where you can grill your own meats and enjoy a hot pot right at the table. Always a fun way to switch things up for dinner! 🤤 Are you team Korean BBQ or hot pot, or do you go for both? #FoodicanAdventures #88KoreanBBQ #FriscoTX #KoreanBBQ #HotPot #DFWEats",
+      "url": "https://www.youtube.com/shorts/QF_DKCFM27g",
+      "thumbnail": "https://i.ytimg.com/vi/QF_DKCFM27g/hqdefault.jpg",
+      "publishedAt": "2026-11-27T23:03:24Z",
+      "updatedAt": "2026-11-27T23:05:39+00:00",
+      "isShort": true,
+      "categories": [
+        "food"
+      ],
+      "finds": false,
+      "category": "food",
+      "location": "Frisco, TX",
+      "latitude": 33.1505998,
+      "longitude": -96.8238183,
+      "locationPrecision": "city",
+      "locationSource": "geocoding"
+    },
     {
       "id": "EcIc4CO22BY",
       "title": "Vietnamese Comfort Food?! 🍜🤤 | Bếp Nhà (Viet Kitchen), DFW",
